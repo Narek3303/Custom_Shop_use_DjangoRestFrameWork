@@ -85,7 +85,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
-'   social_core.backends.google.GoogleOAuth2',
+    'social_core.backends.google.GoogleOAuth2',
 )
 
 
