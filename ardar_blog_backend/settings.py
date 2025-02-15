@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 
 
@@ -26,7 +27,7 @@ SECRET_KEY = 'django-insecure-kldadasdwq12312234-0124023rid949102423kdoekdcojwr9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -43,14 +44,19 @@ INSTALLED_APPS = [
     'taggit',
     'rest_framework',
     'rest_framework.authtoken',
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
-    'social_django',
 
-    'dj_rest_auth',
-    'dj_rest_auth.registration',
+    'authemail',
+    'oauth2_provider',
+    'drf_social_oauth2',
+    'social_django',
+    # 'allauth',
+    # 'allauth.account',
+    # 'allauth.socialaccount',
+    # 'allauth.socialaccount.providers.google',
+
+
+    # 'dj_rest_auth',
+    # 'dj_rest_auth.registration',
 
 
     'post.apps.PostConfig',
@@ -60,11 +66,11 @@ INSTALLED_APPS = [
 
 
 SITE_ID = 1
-
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
+#
+# ACCOUNT_AUTHENTICATION_METHOD = 'email'
+# ACCOUNT_EMAIL_REQUIRED = True
+# ACCOUNT_USERNAME_REQUIRED = False
+# ACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 
 SOCIALACCOUNT_PROVIDERS = {
@@ -75,18 +81,34 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "417165015841-r5pp3qrjg97u16pduf3uqgbb0egjc172.apps.googleusercontent.com"
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "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"
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
 
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
+
     'social_core.backends.google.GoogleOAuth2',
+    # 'allauth.account.auth_backends.AuthenticationBackend',
+    'drf_social_oauth2.backends.DjangoOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
 )
+
+
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '417165015841-r5pp3qrjg97u16pduf3uqgbb0egjc172.apps.googleusercontent.com'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
+
+
+
+
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+]
+
 
 
 AUTH_USER_MODEL = 'users.CustomUser'
@@ -94,8 +116,18 @@ AUTH_USER_MODEL = 'users.CustomUser'
 
 
 
-LOGIN_REDIRECT_URL = 'home'
-ACCOUNT_REDIRECT_URL = 'home'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = 'margaryannarek056@gmail.com'
+EMAIL_HOST_PASSWORD = 'xzletqoosqccdday'
+DEFAULT_FROM_EMAIL = 'margaryannarek056@gmail.com'
+EMAIL_FROM = 'margaryannarek056@gmail.com'
+EMAIL_BCC = 'margaryannarek056@gmail.com'
+
 
 
 
@@ -111,7 +143,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
+    # 'allauth.account.middleware.AccountMiddleware',
 
 
 ]
@@ -132,6 +165,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',
+                'social_django.context_processors.login_redirect',
             ],
         },
     },
@@ -207,12 +242,11 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
+
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',  # django-oauth-toolkit >= 1.0.0
+        'drf_social_oauth2.authentication.SocialAuthentication',
     ]
 }

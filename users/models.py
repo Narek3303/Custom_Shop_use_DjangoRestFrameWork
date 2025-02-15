@@ -1,7 +1,12 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from authemail.models import EmailUserManager, EmailAbstractUser
 
 
 
-class CustomUser(AbstractUser):
-    pass
+
+class CustomUser(EmailAbstractUser):
+        # Custom fields
+        date_of_birth = models.DateField('Date of birth', null=True, blank=True)
+
+        # Required
+        objects = EmailUserManager()
