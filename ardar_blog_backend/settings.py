@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from oauth2_provider import settings as oauth2_settings
 
 
 
@@ -27,12 +28,13 @@ SECRET_KEY = 'django-insecure-kldadasdwq12312234-0124023rid949102423kdoekdcojwr9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    # 'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,18 +51,16 @@ INSTALLED_APPS = [
     'oauth2_provider',
     'drf_social_oauth2',
     'social_django',
-    # 'allauth',
-    # 'allauth.account',
-    # 'allauth.socialaccount',
-    # 'allauth.socialaccount.providers.google',
+
+
 
 
     # 'dj_rest_auth',
     # 'dj_rest_auth.registration',
 
 
-    'post.apps.PostConfig',
     'users.apps.UsersConfig',
+    'shop.apps.ShopConfig',
 ]
 
 
@@ -93,12 +93,13 @@ AUTHENTICATION_BACKENDS = (
     # 'allauth.account.auth_backends.AuthenticationBackend',
     'drf_social_oauth2.backends.DjangoOAuth2',
     'django.contrib.auth.backends.ModelBackend',
+
 )
 
 
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '417165015841-r5pp3qrjg97u16pduf3uqgbb0egjc172.apps.googleusercontent.com'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '417165015841-jptju8v67ap2kuf3baugovsct1sth74i.apps.googleusercontent.com'
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
 
 
 
@@ -188,6 +189,12 @@ DATABASES = {
 
 
 
+
+# expires in 6 months
+oauth2_settings.DEFAULTS['ACCESS_TOKEN_EXPIRE_SECONDS'] = 60
+
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
@@ -250,3 +257,18 @@ REST_FRAMEWORK = {
         'drf_social_oauth2.authentication.SocialAuthentication',
     ]
 }
+
+
+
+# SOCIAL_AUTH_PIPELINE = (
+#     'social_core.pipeline.social_auth.social_details',
+#     'social_core.pipeline.social_auth.social_uid',
+#     'social_core.pipeline.social_auth.auth_allowed',
+#     'social_core.pipeline.social_auth.social_user',
+#     'social_core.pipeline.user.get_username',
+#     'social_core.pipeline.user.create_user',  # Creates the user if not already existing
+#     'authentication.pipeline.verify_user',    # Calls our custom function
+#     'social_core.pipeline.social_auth.associate_user',
+#     'social_core.pipeline.social_auth.load_extra_data',
+#     'social_core.pipeline.user.user_details',
+# )
