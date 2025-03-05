@@ -1,6 +1,9 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth import get_user_model
+from django.http import request
+from rest_framework.permissions import AllowAny
+from rest_framework.status import HTTP_200_OK
 from social_django.models import UserSocialAuth
 from django.shortcuts import render
 
@@ -11,6 +14,11 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
+from rest_framework.views import APIView
+from rest_framework import status
+from .serializers import UserTokenCheckSerializer
+from rest_framework.authtoken.models import Token
+
 
 
 @api_view(['POST'])
@@ -40,3 +48,22 @@ def verify_social_user(sender, instance, created, **kwargs):
         if not user.is_verified:  # Եթե դեռ չվավերացված է
             user.is_verified = True
             user.save()
+
+
+
+class UserTokenCheckView(APIView):
+    permission_classes = (AllowAny,)
+    serializer_class = UserTokenCheckSerializer
+
+
+
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        token = serializer.data['token']
+        tokens = Token.objects.all()
+        content = {'Not': 'Token chka'}
+        if token in tokens:
+            content = {'OK': 'Token ka'}
+            return Response(content, HTTP_200_OK)
+        return Response(content, status.HTTP_404_NOT_FOUND)

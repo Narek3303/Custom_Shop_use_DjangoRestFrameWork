@@ -260,6 +260,9 @@ REST_FRAMEWORK = {
 
 
 
+
+
+
 # SOCIAL_AUTH_PIPELINE = (
 #     'social_core.pipeline.social_auth.social_details',
 #     'social_core.pipeline.social_auth.social_uid',
@@ -272,3 +275,14 @@ REST_FRAMEWORK = {
 #     'social_core.pipeline.social_auth.load_extra_data',
 #     'social_core.pipeline.user.user_details',
 # )
+
+
+
+
+# CART
+
+CART_SESSION_ID = 'cart'
+
+
+
+

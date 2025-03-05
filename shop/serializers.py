@@ -1,13 +1,24 @@
 from rest_framework import serializers
-from .models import Category, SubCategory, Product, Image, Color, Size
+from .models import Category, SubCategory, Product, Image, Color, Size, Slider
 
 from rest_framework import serializers
 from .models import Category, SubCategory
 
+
+class CategoryForSubcategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["id", "name", "slug"]
+
 class SubcategorySerializer(serializers.ModelSerializer):
+
+
     class Meta:
         model = SubCategory
-        fields = ["id", "name"]
+        fields = ["id", "name", "image"]
+
+
+
 
 class CategorySerializer(serializers.ModelSerializer):
     subcategories = SubcategorySerializer(many=True, read_only=True)
@@ -46,6 +57,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'image', 'price', 'colors']
 
 
+
+
 class ProductDetailSerializer(serializers.ModelSerializer):
     image = ImageSerializer(many=True)
     colors = ColorSerializer(many=True)
@@ -59,3 +72,16 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     def get_tags(self, obj):
         return [tag.name for tag in obj.tags.all()]
+
+
+
+
+class UserTokenCheckSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+
+
+
+class SliderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Slider
+        fields = '__all__'

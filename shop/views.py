@@ -3,13 +3,15 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 
-from .models import Category, SubCategory, Product
-from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer
+from .models import Category, SubCategory, Product, Slider
+from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
+    UserTokenCheckSerializer, SliderSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.authtoken.models import Token
 
 
 class CategoryView(APIView):
@@ -29,8 +31,19 @@ class CategoryView(APIView):
 # class SubcategoryView(APIView):
 #     permission_classes = (AllowAny,)
 #     serializer_class = SubcategorySerializer
-
-
+#
+#
+#
+#     def get(self, request):
+#         subcategories = SubCategory.objects.all()
+#         serializer = SubcategorySerializer(subcategories, many=True)
+#         return Response(
+#             {
+#
+#                 "data": serializer.data
+#             },
+#             status=status.HTTP_200_OK
+#         )
 
 
 class ProductListView(APIView):
@@ -106,6 +119,26 @@ class ProductDetailView(APIView):
         }, status=200)
 
 
+class UserTokenCheckView(APIView):
+    permission_classes = (AllowAny,)
+    serializer_class = UserTokenCheckSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            token = serializer.validated_data['token']  # Use validated_data
+
+            # Check if the token exists
+            if Token.objects.filter(key=token).exists():
+                return Response({'հաղորդագրություն': 'Վավեր նշան'}, status=status.HTTP_200_OK)
+
+            return Response({'սխալ': 'Անվավեր նշան'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+class SliderListAPIView(APIView):
+    def get(self, request):
+        sliders = Slider.objects.all()
+        serializer = SliderSerializer(sliders, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

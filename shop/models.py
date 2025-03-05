@@ -36,6 +36,7 @@ class SubCategory(models.Model):
         category = models.ForeignKey(Category, related_name='subcategories', on_delete=models.CASCADE)
         name = models.CharField('Կատեգորիայի անվանումը', max_length=200)
         slug = models.SlugField(max_length=200, unique=True)
+        image = models.ImageField('Ենթակատեգորիայի Նկար', upload_to='subcategory_image/%Y/%m/%d', null=True)
 
         class Meta:
             ordering = ['name']
@@ -132,3 +133,21 @@ class Color(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.hex_code})"
+
+
+class Slider(models.Model):
+    name = models.CharField('Անուն', max_length=200)
+    image = models.ImageField('Կարուսելի պատկեր', upload_to='carousel_image/%Y/%m/%d')
+    updated = models.DateTimeField(auto_now=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+
+    def __str__(self):
+        return self.name
+
+
+    class Meta:
+        ordering = ['-created']
+        indexes = [
+            models.Index(fields=['-created']),
+        ]
