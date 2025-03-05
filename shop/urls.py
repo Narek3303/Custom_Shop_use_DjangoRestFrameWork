@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     path('category/', views.CategoryView.as_view()),
     path('sliders/', views.SliderListAPIView.as_view()),
+    path('product_filter/', views.ProductFilterView.as_view()),
     path('products/', views.ProductListView.as_view(), name='product-list'),
     path('products/category/<slug:category_slug>/', views.ProductListView.as_view(), name='product-list-by-category'),
     path('products/category/<slug:category_slug>/subcategory/<slug:subcategory_slug>/', views.ProductListView.as_view(), name='product-list-by-subcategory'),

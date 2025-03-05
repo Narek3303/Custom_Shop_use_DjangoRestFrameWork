@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Category, Product, SubCategory, Image, Size, Color
+from .models import Category, Product, SubCategory, Image, Size, Color, Slider, Brand
 
 
 @admin.register(Category)
@@ -56,3 +56,11 @@ class SizeAdmin(admin.ModelAdmin):
 class ColorAdmin(admin.ModelAdmin):
     list_display = ['name', 'hex_code']
 
+@admin.register(Slider)
+class SliderAdmin(admin.ModelAdmin):
+    list_display = ['name']
+
+
+@admin.register(Brand)
+class BrandAdmin(admin.ModelAdmin):
+    list_display = ['name']

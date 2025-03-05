@@ -3,9 +3,9 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 
-from .models import Category, SubCategory, Product, Slider
+from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color
 from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
-    UserTokenCheckSerializer, SliderSerializer
+    UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, ProductFilterSerializer
 from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -139,6 +139,31 @@ class UserTokenCheckView(APIView):
 
 class SliderListAPIView(APIView):
     def get(self, request):
-        sliders = Slider.objects.all()
+        sliders = Slider.objects.all()[:4]
         serializer = SliderSerializer(sliders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProductFilterView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        # Querying all objects from the models
+        brands = Brand.objects.all()
+        images = Image.objects.all()
+        colors = Color.objects.all()
+        sizes = Size.objects.all()
+
+        # Serializing each model's data
+        brand_serializer = BrandSerializer(brands, many=True)
+        image_serializer = ImageSerializer(images, many=True)
+        color_serializer = ColorSerializer(colors, many=True)
+        size_serializer = SizeSerializer(sizes, many=True)
+
+        # Returning the serialized data in the response
+        return Response({
+            'brands': brand_serializer.data,
+            'images': image_serializer.data,
+            'colors': color_serializer.data,
+            'sizes': size_serializer.data
+        }, status=status.HTTP_200_OK)

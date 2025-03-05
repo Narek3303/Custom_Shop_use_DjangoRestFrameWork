@@ -31,6 +31,15 @@ class Category(models.Model):
         return self.name
 
 
+class Brand(models.Model):
+    name = models.CharField('Բրենդի Անունը', max_length=40)
+    slug = models.SlugField(max_length=200)
+
+
+    def __str__(self):
+        return self.name
+
+
 
 class SubCategory(models.Model):
         category = models.ForeignKey(Category, related_name='subcategories', on_delete=models.CASCADE)
@@ -68,12 +77,14 @@ class Product(models.Model):
     )
     name = models.CharField('Անուն',max_length=200)
     slug = models.SlugField(max_length=200)
+    brand = models.ForeignKey('Brand', verbose_name='Բրենդ', related_name='brands', null=True, on_delete=models.CASCADE)
     image = models.ManyToManyField('Image', verbose_name='Նկարներ', related_name='images')
     size = models.ManyToManyField('Size', verbose_name='Չափսեր', related_name='sizes')
     colors = models.ManyToManyField('Color', related_name="colorsmodel", null=True)
     description = models.TextField('Ապրանքի նկարագրություն', blank=True)
     delivery_service = models.TextField('Առաքման ծառայություն', blank=True, null=True)
     price = models.DecimalField('Գին',max_digits=10, decimal_places=2)
+    discount_percentage = models.DecimalField('Զեղչված Գին',max_digits=10, decimal_places=2, default=0, null=True)
     available = models.BooleanField(default=True)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
@@ -94,8 +105,21 @@ class Product(models.Model):
             models.Index(fields=['-created']),
         ]
 
+
+    def get_final_price(self):
+        """Calculate the final price after applying the discount percentage"""
+        if self.discount_percentage and self.discount_percentage > 0:
+            discount_amount = (self.discount_percentage / 100) * self.price
+            return self.price - discount_amount
+        return None
+
+
+
+
     def __str__(self):
         return self.name
+
+
 
 
 

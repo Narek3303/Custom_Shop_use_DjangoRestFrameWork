@@ -1,14 +1,10 @@
 from rest_framework import serializers
-from .models import Category, SubCategory, Product, Image, Color, Size, Slider
+from .models import Category, SubCategory, Product, Image, Color, Size, Slider, Brand
 
 from rest_framework import serializers
 from .models import Category, SubCategory
 
 
-class CategoryForSubcategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ["id", "name", "slug"]
 
 class SubcategorySerializer(serializers.ModelSerializer):
 
@@ -84,4 +80,24 @@ class UserTokenCheckSerializer(serializers.Serializer):
 class SliderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Slider
-        fields = '__all__'
+        fields = ['id', 'name', 'image']
+
+
+class BrandSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Brand
+        fields = ['id', 'name', 'slug']
+
+
+
+class ProductFilterSerializer(serializers.Serializer):
+    brand = BrandSerializer(many=True)
+    colors = ColorSerializer(many=True)
+    sizes = SizeSerializer(many=True)
+    images = ImageSerializer(many=True)
+
+
+
+
+
+
