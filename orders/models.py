@@ -54,12 +54,12 @@ class Order(models.Model):
         total_cost = self.get_total_cost_before_discount()
         return total_cost - self.get_discount()
 
-    def get_stripe_url(self):
-        """Returns the Stripe payment link for the order."""
-        if not self.stripe_id:
-            return ''
-        path = '/test/' if '_test_' in settings.STRIPE_SECRET_KEY else '/'
-        return f'https://dashboard.stripe.com{path}payments/{self.stripe_id}'
+    # def get_stripe_url(self):
+    #     """Returns the Stripe payment link for the order."""
+    #     if not self.stripe_id:
+    #         return ''
+    #     path = '/test/' if '_test_' in settings.STRIPE_SECRET_KEY else '/'
+    #     return f'https://dashboard.stripe.com{path}payments/{self.stripe_id}'
 
     @property
     def full_address(self):

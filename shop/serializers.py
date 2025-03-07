@@ -1,3 +1,4 @@
+from django.db.models import DecimalField
 from rest_framework import serializers
 from .models import Category, SubCategory, Product, Image, Color, Size, Slider, Brand
 
@@ -11,7 +12,9 @@ class SubcategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SubCategory
-        fields = ["id", "name", "image"]
+        fields = ["id", "name", "slug", "image"]
+
+
 
 
 
@@ -21,7 +24,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ["id", "name", "subcategories"]
+        fields = ["id", "name", 'slug', "subcategories"]
 
 
 
@@ -34,12 +37,12 @@ class ImageSerializer(serializers.ModelSerializer):
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Color
-        fields = ["id", "name", 'hex_code']
+        fields = ["id", "name", 'slug', 'hex_code']
 
 class SizeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Size
-        fields = ["id", "name"]
+        fields = ["id", "name", 'slug']
 
 
 
@@ -68,6 +71,31 @@ class ProductListFilterSerializer(serializers.Serializer):
     colors = ColorSerializer(required=False)
     brand =  BrandSerializer(required=False)
     size = SizeSerializer(required=False)
+
+
+class ProductListFilterPostSerializer(serializers.Serializer):
+    category = CategorySerializer(many=True, required=False)
+    subcategory = SubcategorySerializer(many=True, required=False)
+    colors = ColorSerializer(many=True, required=False)
+    brand =  BrandSerializer(required=False)
+    size = SizeSerializer(required=False)
+
+
+    min_price = serializers.DecimalField(
+        required=False,
+        max_digits=10,
+        decimal_places=0,
+        min_value=0.01,  # Optionally, add minimum value for filtering
+        label="Minimum Price",
+    )
+    max_price = serializers.DecimalField(
+        required=False,
+        max_digits=10,
+        decimal_places=0,
+        min_value=0.01,  # Optionally, add minimum value for filtering
+        label="Maximum Price",
+    )
+
 
 
 
