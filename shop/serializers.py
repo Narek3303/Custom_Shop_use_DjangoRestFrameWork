@@ -43,14 +43,32 @@ class SizeSerializer(serializers.ModelSerializer):
 
 
 
+class BrandSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Brand
+        fields = ['id', 'name', 'slug']
+
+
+
 class ProductListSerializer(serializers.ModelSerializer):
     image = ImageSerializer(many=True)
     colors = ColorSerializer(many=True)
+    brand =  BrandSerializer()
+    size = SizeSerializer(many=True)
+
+
 
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'image', 'price', 'colors']
+        fields = ['id', 'name', 'image', 'price', 'colors', 'brand', 'size']
+
+
+class ProductListFilterSerializer(serializers.Serializer):
+    colors = ColorSerializer(required=False)
+    brand =  BrandSerializer(required=False)
+    size = SizeSerializer(required=False)
+
 
 
 
@@ -83,10 +101,6 @@ class SliderSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'image']
 
 
-class BrandSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Brand
-        fields = ['id', 'name', 'slug']
 
 
 
@@ -94,7 +108,7 @@ class ProductFilterSerializer(serializers.Serializer):
     brand = BrandSerializer(many=True)
     colors = ColorSerializer(many=True)
     sizes = SizeSerializer(many=True)
-    images = ImageSerializer(many=True)
+
 
 
 

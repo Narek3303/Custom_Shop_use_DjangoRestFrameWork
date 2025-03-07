@@ -1,49 +1,34 @@
-from django.db.models import Count
+from django.core.exceptions import FieldError
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
-from rest_framework.exceptions import NotFound
-
-from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color
-from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
-    UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, ProductFilterSerializer
-from rest_framework import generics
+from django.db.models import Count
+from rest_framework.parsers import JSONParser
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 
+from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color
+from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
+    UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, \
+    ProductFilterSerializer, ProductListFilterSerializer
+
 
 class CategoryView(APIView):
     permission_classes = (AllowAny,)
     serializer_class = CategorySerializer
 
-
-
     def get(self, request):
-
         categories = Category.objects.all()
-
         serializer = CategorySerializer(categories, many=True)
-        content = {"մանրամասն": ("Կոլոր կատեգորիաները և ենթակատեգորիաները")}
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({
+            "message": "Category list fetched successfully",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
 
-# class SubcategoryView(APIView):
-#     permission_classes = (AllowAny,)
-#     serializer_class = SubcategorySerializer
-#
-#
-#
-#     def get(self, request):
-#         subcategories = SubCategory.objects.all()
-#         serializer = SubcategorySerializer(subcategories, many=True)
-#         return Response(
-#             {
-#
-#                 "data": serializer.data
-#             },
-#             status=status.HTTP_200_OK
-#         )
+
+
 
 
 class ProductListView(APIView):
@@ -53,70 +38,95 @@ class ProductListView(APIView):
 
 
     def get(self, request, category_slug=None, subcategory_slug=None):
+
+
+
         category = None
         subcategory = None
-        categories = Category.objects.all()
-        subcategories = SubCategory.objects.all()
-        products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
 
+        products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
         if category_slug:
             category = get_object_or_404(Category, slug=category_slug)
-            subcategories = subcategories.filter(category=category)
+            subcategories = SubCategory.objects.filter(category=category)
             products = products.filter(category__in=subcategories)
-
 
         if subcategory_slug:
             subcategory = get_object_or_404(SubCategory, slug=subcategory_slug, category=category)
             products = products.filter(category=subcategory)
 
-        # category_data = CategorySerializer(category).data if category else None
-        #
-        # categories_data = CategorySerializer(categories, many=True).data
-
-        products_data = ProductListSerializer(products, many=True).data
-
+        serialized_products = ProductListSerializer(products, many=True).data
         return Response({
-            # 'category': category_data,
-
-            # 'categories': categories_data,
-
-            'products': products_data,
+            "products": serialized_products,
         }, status=status.HTTP_200_OK)
 
+# class ProductFilterListView(APIView):
+#     permission_classes = (AllowAny,)
+#     serializer_class = ProductListSerializer
+#
+#     def get(self, request, category_slug=None, subcategory_slug=None):
+#
+#         category = None
+#         subcategory = None
+#
+#         products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
+#         if category_slug:
+#             category = get_object_or_404(Category, slug=category_slug)
+#             subcategories = SubCategory.objects.filter(category=category)
+#             products = products.filter(category__in=subcategories)
+#
+#         if subcategory_slug:
+#             subcategory = get_object_or_404(SubCategory, slug=subcategory_slug, category=category)
+#             products = products.filter(category=subcategory)
+#
+#         serialized_products = ProductListSerializer(products, many=True).data
+#         return Response({
+#             "products": serialized_products,
+#         }, status=status.HTTP_200_OK)
 
 
 
-from django.shortcuts import get_object_or_404
-from django.db.models import Count
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from .models import Product
-from .serializers import ProductDetailSerializer
+#
+
+
+        # ✅ Գնի ֆիլտր (min_price & max_price)
+        # min_price = request.GET.get("min_price")
+        # max_price = request.GET.get("max_price")
+        #
+        # if min_price:
+        #     products = products.filter(price__gte=min_price)  # ✅ `gte` -> greater than or equal
+        # if max_price:
+        #     products = products.filter(price__lte=max_price)
+        #
+        # serialized_products = ProductListSerializer(products, many=True).data
+        # return Response({"products": serialized_products}, status=status.HTTP_200_OK)
+
+
+
 
 class ProductDetailView(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request, slug, product_id):
+        """
+        Returns detailed information about a product and some similar products based on tags.
+        """
         product = get_object_or_404(
             Product, id=product_id, slug=slug, available=True, status=Product.Status.PUBLISHED
         )
 
-        post_tags_ids = product.tags.values_list('id', flat=True)
-
-        similar_posts = Product.objects.filter(
-            tags__in=post_tags_ids,
+        similar_products = Product.objects.filter(
+            tags__in=product.tags.values_list('id', flat=True),
             status=Product.Status.PUBLISHED
         ).exclude(id=product.id)
 
-        similar_posts = similar_posts.annotate(
+        similar_products = similar_products.annotate(
             same_tags=Count('tags')
         ).order_by('-same_tags', '-created')[:20]
 
         return Response({
             'product': ProductDetailSerializer(product).data,
-            'similar_posts': ProductDetailSerializer(similar_posts, many=True).data,
-        }, status=200)
+            'similar_products': ProductDetailSerializer(similar_products, many=True).data,
+        }, status=status.HTTP_200_OK)
 
 
 class UserTokenCheckView(APIView):
@@ -124,21 +134,24 @@ class UserTokenCheckView(APIView):
     serializer_class = UserTokenCheckSerializer
 
     def post(self, request):
+        """
+        Validates the provided user token.
+        """
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            token = serializer.validated_data['token']  # Use validated_data
-
-            # Check if the token exists
+            token = serializer.validated_data['token']
             if Token.objects.filter(key=token).exists():
-                return Response({'հաղորդագրություն': 'Վավեր նշան'}, status=status.HTTP_200_OK)
-
-            return Response({'սխալ': 'Անվավեր նշան'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'message': 'Valid token'}, status=status.HTTP_200_OK)
+            return Response({'error': 'Invalid token'}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SliderListAPIView(APIView):
     def get(self, request):
+        """
+        Fetches the latest 4 sliders for the homepage carousel.
+        """
         sliders = Slider.objects.all()[:4]
         serializer = SliderSerializer(sliders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -148,22 +161,102 @@ class ProductFilterView(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request):
-        # Querying all objects from the models
+        """
+        Fetches all categories, brands, colors, and sizes for product filtering.
+        """
+        categories = Category.objects.all()
         brands = Brand.objects.all()
-        images = Image.objects.all()
         colors = Color.objects.all()
         sizes = Size.objects.all()
 
-        # Serializing each model's data
+        category_serializer = CategorySerializer(categories, many=True)
         brand_serializer = BrandSerializer(brands, many=True)
-        image_serializer = ImageSerializer(images, many=True)
         color_serializer = ColorSerializer(colors, many=True)
         size_serializer = SizeSerializer(sizes, many=True)
 
-        # Returning the serialized data in the response
         return Response({
+            'categories': category_serializer.data,
             'brands': brand_serializer.data,
-            'images': image_serializer.data,
             'colors': color_serializer.data,
             'sizes': size_serializer.data
         }, status=status.HTTP_200_OK)
+
+
+def create_products(request):
+    """
+    Creates a set of sample products for testing purposes.
+    """
+    category = Category.objects.first()  # Get the first category
+    subcategory = SubCategory.objects.first()  # Get the first subcategory
+    brand = Brand.objects.first()  # Get the first brand
+    size = Size.objects.first()  # Get the first size
+    color = Color.objects.first()  # Get the first color
+
+    # Generate 10 sample products
+    products = [
+        Product(
+            name=f'Product {i+1}',
+            slug=f'product-{i+1}',
+            category=subcategory,
+            brand=brand,
+            price=100 + i * 10,  # Price increases per product
+            available=True,
+            description=f'Description for product {i+1}',
+        )
+        for i in range(10)
+    ]
+
+    # Bulk create all products at once
+    Product.objects.bulk_create(products)
+
+    return JsonResponse({'status': 'Products created successfully!'}, status=status.HTTP_201_CREATED)
+
+
+
+class ProductFilterListView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        # Get filter parameters from the request body
+        filter_data = request.data
+
+        products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
+
+        # Category filter
+        category_slug = filter_data.get('category_slug', None)
+        if category_slug:
+            category = get_object_or_404(Category, slug=category_slug)
+            subcategories = SubCategory.objects.filter(category=category)
+            products = products.filter(category__in=subcategories)
+
+        # Subcategory filter
+        subcategory_slug = filter_data.get('subcategory_slug', None)
+        if subcategory_slug:
+            subcategory = get_object_or_404(SubCategory, slug=subcategory_slug, category=category)
+            products = products.filter(category=subcategory)
+
+        # Brand filter
+        brand_slug = filter_data.get('brand_slug', None)
+        if brand_slug:
+            brand = get_object_or_404(Brand, slug=brand_slug)
+            products = products.filter(brand=brand)
+
+        # Colors filter
+        colors_slug = filter_data.get('colors_slug', None)
+        if colors_slug:
+            color_slugs = colors_slug.split(",")  # 'red,blue' → ['red', 'blue']
+            colors = Color.objects.filter(slug__in=color_slugs)
+            products = products.filter(colors__in=colors).distinct()
+
+        # Sizes filter
+        size_slug = filter_data.get('size_slug', None)
+        if size_slug:
+            size_slugs = size_slug.split(",")  # 'small,large' → ['small', 'large']
+            sizes = Size.objects.filter(slug__in=size_slugs)
+            products = products.filter(size__in=sizes).distinct()
+
+        # Serialize the filtered products
+        serialized_products = ProductListSerializer(products, many=True).data
+
+        # Return the filtered products
+        return Response({"products": serialized_products}, status=status.HTTP_200_OK)

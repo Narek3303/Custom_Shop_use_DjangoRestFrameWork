@@ -1,8 +1,13 @@
 from django.urls import path
-from .views import CartAddAPIView, CartRemoveAPIView, CartDetailAPIView
+from . import views
+
+app_name = 'cart'
 
 urlpatterns = [
-    path('add/<int:product_id>/', CartAddAPIView.as_view(), name='cart-add'),
-    path('remove/<int:product_id>/', CartRemoveAPIView.as_view(), name='cart-remove'),
-    path('detail/', CartDetailAPIView.as_view(), name='cart-detail'),
+    path('', views.CartDetailAPIView.as_view(), name='cart_detail'),  # Get all cart details
+    path('add/<int:product_id>/', views.CartAddAPIView.as_view(), name='cart_add'),  # Add item to cart
+    path('remove/<int:product_id>/', views.CartRemoveAPIView.as_view(), name='cart_remove'),  # Remove item from cart
+    path('clear/', views.CartClearAPIView.as_view(), name='cart_clear'),  # Clear the cart
+    path('update/<int:product_id>/', views.CartUpdateAPIView.as_view(), name='cart_update'),  # Update quantity of item
+    path('total_price/', views.CartTotalPriceAPIView.as_view(), name='cart_total_price'),  # Get total price of cart
 ]

@@ -61,6 +61,8 @@ INSTALLED_APPS = [
 
     'users.apps.UsersConfig',
     'shop.apps.ShopConfig',
+    # 'orders.apps.OrdersConfig',
+    # 'cart.apps.CartConfig',
 ]
 
 
@@ -168,6 +170,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'social_django.context_processors.backends',
                 'social_django.context_processors.login_redirect',
+                # "cart.context_processors.CartProcessor",
             ],
         },
     },

@@ -1,61 +1,101 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
-from django.shortcuts import get_object_or_404
-from .cart import Cart  # Ensure you have a Cart class handling session-based cart logic
+from .cart import Cart
 from shop.models import Product
-from .serializers import CartAddProductSerializer
-
-class CartAddAPIView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request, product_id):
-        cart = Cart(request)
-        product = get_object_or_404(Product, id=product_id)
-
-        serializer = CartAddProductSerializer(data=request.data)
-        if serializer.is_valid():
-            cd = serializer.validated_data
-
-            cart.add(
-                product=product,
-                color=cd.get('color'),
-                size=cd.get('size'),
-                quantity=cd.get('quantity'),
-                override_quantity=cd.get('override')
-            )
-            return Response({"message": "Product added to cart successfully"}, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class CartRemoveAPIView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request, product_id):
-        cart = Cart(request)
-        product = get_object_or_404(Product, id=product_id)
-        cart.remove(product)
-        return Response({"message": "Product removed from cart successfully"}, status=status.HTTP_200_OK)
-
+from .serializers import CartSerializer
 
 class CartDetailAPIView(APIView):
-    permission_classes = [AllowAny]
+    """
+    Retrieve cart information, including all cart items, total price, and item count.
+    """
 
     def get(self, request):
         cart = Cart(request)
-        cart_items = []
+        serializer = CartSerializer({
+            'total_price': cart.get_total_price(),
+            'total_items': len(cart),
+            'items': [{
+                'product_id': item['product'].id,
+                'quantity': item['quantity'],
+                'price': item['price'],
+                'total_price': item['total_price'],
+                'product_name': item['product'].name,
+            } for item in cart],
+        })
+        return Response(serializer.data)
 
-        for item in cart:
-            cart_items.append({
-                "product": item["product"].id,
-                "name": item["product"].name,
-                "color": item.get("color"),
-                "size": item.get("size"),
-                "quantity": item["quantity"],
-                "price": item["price"],
-                "total_price": item["total_price"]
-            })
 
-        return Response({"cart": cart_items}, status=status.HTTP_200_OK)
+class CartAddAPIView(APIView):
+    """
+    Add a product to the cart.
+    """
+
+    def post(self, request, product_id):
+        cart = Cart(request)
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        quantity = int(request.data.get('quantity', 1))
+        color = request.data.get('color', '')
+        size = request.data.get('size', '')
+        cart.add(product=product, color=color, size=size, quantity=quantity)
+
+        return Response({"message": "Product added to cart successfully"}, status=status.HTTP_201_CREATED)
+
+
+class CartRemoveAPIView(APIView):
+    """
+    Remove a product from the cart.
+    """
+
+    def post(self, request, product_id):
+        cart = Cart(request)
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        cart.remove(product)
+        return Response({"message": "Product removed from cart successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class CartClearAPIView(APIView):
+    """
+    Clear the cart.
+    """
+
+    def post(self, request):
+        cart = Cart(request)
+        cart.clear()
+        return Response({"message": "Cart cleared successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class CartUpdateAPIView(APIView):
+    """
+    Update quantity of a product in the cart.
+    """
+
+    def post(self, request, product_id):
+        cart = Cart(request)
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        quantity = int(request.data.get('quantity', 1))
+        cart.add(product=product, quantity=quantity, override_quantity=True)
+
+        return Response({"message": "Cart updated successfully"}, status=status.HTTP_200_OK)
+
+
+class CartTotalPriceAPIView(APIView):
+    """
+    Get the total price of all items in the cart.
+    """
+
+    def get(self, request):
+        cart = Cart(request)
+        return Response({"total_price": str(cart.get_total_price())}, status=status.HTTP_200_OK)
