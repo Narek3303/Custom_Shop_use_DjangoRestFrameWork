@@ -11,7 +11,7 @@ from rest_framework.authtoken.models import Token
 from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color
 from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
     UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, \
-    ProductFilterSerializer, ProductListFilterSerializer, ProductListFilterPostSerializer
+    ProductFilterSerializer, ProductListFilterSerializer, ProductListFilterPostSerializer, ChatGPTPost
 
 import io
 from rest_framework.parsers import JSONParser
@@ -281,3 +281,18 @@ class ProductFilterListView(APIView):
         serialized_products = ProductListSerializer(products, many=True).data
 
         return Response({"products": serialized_products}, status=status.HTTP_200_OK)
+
+
+
+# class ChatGPTView(APIView):
+#     permission_classes = (AllowAny,)
+#     serializer_class = ChatGPTPost
+#
+#
+#     def post(self, request):
+#         serializer = self.serializer_class(data=request.data)
+#
+#         if not serializer.is_valid():
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+

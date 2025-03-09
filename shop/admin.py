@@ -62,13 +62,16 @@ class ImageAdmin(admin.ModelAdmin):
 
 
 
+
 @admin.register(Size)
 class SizeAdmin(admin.ModelAdmin):
     list_display = ['name']
+    prepopulated_fields = {'slug': ('name',)}
 
 @admin.register(Color)
 class ColorAdmin(admin.ModelAdmin):
     list_display = ['name', 'hex_code']
+    prepopulated_fields = {'slug': ('name',)}
 
 @admin.register(Slider)
 class SliderAdmin(admin.ModelAdmin):
@@ -78,3 +81,4 @@ class SliderAdmin(admin.ModelAdmin):
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):
     list_display = ['name']
+    prepopulated_fields = {'slug': ('name',)}

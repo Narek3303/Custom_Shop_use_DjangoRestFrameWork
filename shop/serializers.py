@@ -75,23 +75,23 @@ class ProductListFilterSerializer(serializers.Serializer):
 
 
 class ProductListFilterPostSerializer(serializers.Serializer):
-    category = serializers.CharField(required=False)
-    subcategory = serializers.CharField(required=False)
+    category = serializers.CharField(required=False, allow_blank=True)
+    subcategory = serializers.CharField(required=False, allow_blank=True)
     colors = serializers.ListField(
-        child=serializers.CharField(), required=False
+        child=serializers.CharField(), required=False, allow_null=True
     )
     brand = serializers.ListField(
         child=serializers.CharField(),  # եթե slug-ները եք ուղարկում
         required=False
     )
     size = serializers.ListField(
-        child=serializers.CharField(), required=False
+        child=serializers.CharField(), required=False, allow_null=True
     )
     min_price = serializers.DecimalField(
-        required=False, max_digits=10, decimal_places=2, min_value=0.01
+        required=False, max_digits=10, decimal_places=2, allow_null=True
     )
     max_price = serializers.DecimalField(
-        required=False, max_digits=10, decimal_places=2, min_value=0.01
+        required=False, max_digits=10, decimal_places=2, allow_null=True
     )
 
 
@@ -141,3 +141,6 @@ class ProductFilterSerializer(serializers.Serializer):
 
 
 
+class ChatGPTPost(serializers.ModelSerializer):
+    model = Product
+    fields = '__all__'
