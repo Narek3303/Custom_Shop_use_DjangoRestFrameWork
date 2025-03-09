@@ -158,3 +158,5 @@ class Slider(models.Model):
         indexes = [
             models.Index(fields=['-created']),
         ]
+
+

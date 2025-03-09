@@ -2,7 +2,6 @@ from django.core.exceptions import FieldError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Count
-from rest_framework.parsers import JSONParser
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -13,6 +12,9 @@ from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, 
 from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
     UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, \
     ProductFilterSerializer, ProductListFilterSerializer, ProductListFilterPostSerializer
+
+import io
+from rest_framework.parsers import JSONParser
 
 
 
@@ -214,141 +216,68 @@ def create_products(request):
 
 
 
-# class ProductFilterListView(APIView):
-#     permission_classes = (AllowAny,)
-#     serializer_class = ProductListFilterPostSerializer
-#
-#     def post(self, request):
-#         # Get filter parameters from the request body
-#         filter_data = serializer
-#
-#         products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
-#
-#         # Category filter
-#         category_slug = filter_data.get('category_slug', None)
-#         if category_slug:
-#             category = get_object_or_404(Category, slug=category_slug)
-#             subcategories = SubCategory.objects.filter(category=category)
-#             products = products.filter(category__in=subcategories)
-#
-#
-#         subcategory_slug = filter_data.get('subcategory_slug', None)
-#         if subcategory_slug:
-#             subcategory = get_object_or_404(SubCategory, slug=subcategory_slug, category=category)
-#             products = products.filter(category=subcategory)
-#
-#         # Brand filter
-#         brand_slug = filter_data.get('brand_slug', None)
-#         if brand_slug:
-#             brand = get_object_or_404(Brand, slug=brand_slug)
-#             products = products.filter(brand=brand)
-#
-#         # Colors filter
-#         colors_slug = filter_data.get('colors_slug', None)
-#         if colors_slug:
-#             color_slugs = colors_slug.split(",")  # 'red,blue' → ['red', 'blue']
-#             colors = Color.objects.filter(slug__in=color_slugs)
-#             products = products.filter(colors__in=colors).distinct()
-#
-#         # Sizes filter
-#         size_slug = filter_data.get('size_slug', None)
-#         if size_slug:
-#             size_slugs = size_slug.split(",")  # 'small,large' → ['small', 'large']
-#             sizes = Size.objects.filter(slug__in=size_slugs)
-#             products = products.filter(size__in=sizes).distinct()
-#
-#         # ✅ Min/Max Price Filtering
-#         min_price = filter_data.get('min_price')
-#         max_price = filter_data.get('max_price')
-#
-#         if min_price is not None:
-#             products = products.filter(price__gte=min_price)
-#
-#         if max_price is not None:
-#             products = products.filter(price__lte=max_price)
-#
-#
-#         # Serialize the filtered products
-#         serialized_products = ProductListSerializer(products, many=True).data
-#
-#         # Return the filtered products
-#         return Response({"products": serialized_products}, status=status.HTTP_200_OK)
-
-
-
-
 class ProductFilterListView(APIView):
     permission_classes = (AllowAny,)
     serializer_class = ProductListFilterPostSerializer
 
     def post(self, request):
-        # Get filter parameters from the request body
+        # Վավերացնում ենք request-ի տվյալները
         serializer = self.serializer_class(data=request.data)
 
-        if serializer.is_valid():
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Վավերացված տվյալները
+        validated_data = serializer.validated_data
+
+        # Ֆիլտրում ենք սկզբնական queryset-ը
+        products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
+
+        # ✅ Կատեգորիայի ֆիլտր
+        # ✅ Կատեգորիայի ֆիլտր
+        category_slug = validated_data.get('category')
+        if category_slug:
+            category = get_object_or_404(Category, slug=category_slug)
+            subcategories = SubCategory.objects.filter(category=category)
+            products = products.filter(category__in=subcategories)  # ⬅️ Փոխվել է subcategory֊ից category
 
 
-            products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
-
-            # Category filter
-            category = serializer.validated_data.get('category', None)
-            subcategory = serializer.validated_data.get('subcategory', None)
-            brand = serializer.validated_data.get('brand', None)
-            size = serializer.validated_data.get('size', None)
-            colors = serializer.validated_data.get('colors', None)
-            min_price = serializer.validated_data.get('min_price', None)
-            max_price = serializer.validated_data.get('max_price', None)
-
-            category_slug = category.slug if category else None
-            subcategory_slug = subcategory.slug if subcategory else None
-            brand_slug = brand.slug if brand else None
-            colors_slug = colors.slug if colors else None
-            size_slug = size.slug if size else None
-
-
-
-            if category_slug:
-                category = get_object_or_404(Category, slug=category_slug)
-                subcategories = SubCategory.objects.filter(category=category)
-                products = products.filter(category__in=subcategories)
+            # ✅ Ենթակատեգորիայի ֆիլտր
+        subcategory_slug = validated_data.get('subcategory')
+        if category_slug and subcategory_slug:
+            subcategory = get_object_or_404(SubCategory, slug=subcategory_slug)
+            products = products.filter(category=subcategory)  # ⬅️ Նորից category֊ով
 
 
 
-            if subcategory_slug:
-                subcategory = get_object_or_404(SubCategory, slug=subcategory_slug, category=category)
-                products = products.filter(category=subcategory)
+        # ✅ Բրենդի ֆիլտր (Multiple Choice)
+        brand_slugs = validated_data.get('brand')
+        if brand_slugs:
+            brands = Brand.objects.filter(slug__in=brand_slugs)  # ստանում ենք brand-ների օբյեկտները slug-ներով
+            products = products.filter(brand__in=brands).distinct()  # ֆիլտրում ենք brand-ների համաձայն
 
-            # Brand filter
+        # ✅ Գույների ֆիլտր (Multiple Choice)
+        colors_slug = validated_data.get('colors')
+        if colors_slug:
+            products = products.filter(colors__slug__in=colors_slug).distinct()
 
-            if brand_slug:
-                brand = get_object_or_404(Brand, slug=brand_slug)
-                products = products.filter(brand=brand)
-
-            # Colors filter
-
-            if colors_slug:
-                color_slugs = colors_slug.split(",")  # 'red,blue' → ['red', 'blue']
-                colors = Color.objects.filter(slug__in=color_slugs)
-                products = products.filter(colors__in=colors).distinct()
-
-            # Sizes filter
-
-            if size_slug:
-                size_slugs = size_slug.split(",")  # 'small,large' → ['small', 'large']
-                sizes = Size.objects.filter(slug__in=size_slugs)
-                products = products.filter(size__in=sizes).distinct()
-
-            # ✅ Min/Max Price Filtering
-
-            if min_price is not None:
-                products = products.filter(price__gte=min_price)
-
-            if max_price is not None:
-                products = products.filter(price__lte=max_price)
+        # ✅ Չափերի ֆիլտր (Multiple Choice)
+        size_slugs = validated_data.get('size')
+        if size_slugs:
+            products = products.filter(size__slug__in=size_slugs).distinct()
 
 
-            # Serialize the filtered products
-            serialized_products = ProductListSerializer(products, many=True).data
+        # ✅ Գին (Min/Max)
+        min_price = validated_data.get('min_price')
+        max_price = validated_data.get('max_price')
 
-            # Return the filtered products
-            return Response({"products": serialized_products}, status=status.HTTP_200_OK)
+        if min_price is not None:
+            products = products.filter(price__gte=min_price)
+
+        if max_price is not None:
+            products = products.filter(price__lte=max_price)
+
+        # ✅ Սերիալիզացնում ենք արդյունքները
+        serialized_products = ProductListSerializer(products, many=True).data
+
+        return Response({"products": serialized_products}, status=status.HTTP_200_OK)
