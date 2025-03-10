@@ -21,12 +21,18 @@ class SubcategorySerializer(serializers.ModelSerializer):
 
 class CategorySerializer(serializers.ModelSerializer):
     subcategories = SubcategorySerializer(many=True, read_only=True, required=False)
+    recommended_subcategories = serializers.SerializerMethodField()
+
 
 
     class Meta:
         model = Category
         fields = ["id", "name", 'slug', "subcategories"]
 
+
+    def get_recommended_subcategories(self, obj):
+        recommended_subcategories = obj.subcategories.filter(is_recommended=True)[:8]
+        return SubcategorySerializer(recommended_subcategories, many=True).data
 
 
 

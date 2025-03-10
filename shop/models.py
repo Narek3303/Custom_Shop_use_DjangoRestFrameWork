@@ -1,3 +1,5 @@
+import uuid
+from django.utils.text import slugify
 from django.db import models
 from django.utils.html import mark_safe
 from django.urls import reverse
@@ -44,6 +46,9 @@ class SubCategory(models.Model):
     name = models.CharField('Subcategory Name', max_length=200)
     slug = models.SlugField(max_length=200, unique=True)
     image = models.ImageField('Subcategory Image', upload_to='subcategory_image/%Y/%m/%d', null=True)
+    is_recommended = models.BooleanField(default=False, null=True, blank=True)
+
+
 
     class Meta:
         ordering = ['name']
@@ -60,6 +65,9 @@ class SubCategory(models.Model):
         return reverse('subcategory_detail', args=[self.slug])
 
 
+
+
+
 class Product(models.Model):
     class Status(models.TextChoices):
         DRAFT = 'DF', 'Draft'
@@ -67,7 +75,7 @@ class Product(models.Model):
 
     category = models.ForeignKey(SubCategory, related_name='products', on_delete=models.CASCADE, null=True)
     name = models.CharField('Product Name', max_length=200)
-    slug = models.SlugField(max_length=200)
+    slug = models.SlugField(max_length=200, blank=True)
     brand = models.ForeignKey('Brand', verbose_name='Brand', related_name='products', null=True, on_delete=models.CASCADE)
     image = models.ManyToManyField('Image', verbose_name='Images', related_name='products')
     size = models.ManyToManyField('Size', verbose_name='Sizes', related_name='products')
@@ -111,6 +119,11 @@ class Product(models.Model):
             return self.price - discount_amount
         return self.price
 
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = f'{slugify(self.name)}-{uuid.uuid4()}'
+        super().save(*args, **kwargs)
 
 class Image(models.Model):
     image = models.ImageField('Image', upload_to='products/%Y/%m/%d', blank=True)
