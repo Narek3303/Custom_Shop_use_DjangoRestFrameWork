@@ -4,6 +4,9 @@ from django.db import models
 from django.utils.html import mark_safe
 from django.urls import reverse
 from taggit.managers import TaggableManager
+from django.core.validators import MaxValueValidator, MinValueValidator
+
+from django.conf import settings
 
 
 class PublishedManager(models.Manager):
@@ -14,6 +17,9 @@ class PublishedManager(models.Manager):
 class Category(models.Model):
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, null=True, unique=True)
+    image = models.ImageField('Category Image', upload_to='category_image/%Y/%m/%d', null=True)
+    is_recommended = models.BooleanField(default=False, null=True, blank=True)
+
 
     class Meta:
         ordering = ['name']
@@ -46,7 +52,6 @@ class SubCategory(models.Model):
     name = models.CharField('Subcategory Name', max_length=200)
     slug = models.SlugField(max_length=200, unique=True)
     image = models.ImageField('Subcategory Image', upload_to='subcategory_image/%Y/%m/%d', null=True)
-    is_recommended = models.BooleanField(default=False, null=True, blank=True)
 
 
 
@@ -117,7 +122,7 @@ class Product(models.Model):
         if self.discount_percentage and self.discount_percentage > 0:
             discount_amount = (self.discount_percentage / 100) * self.price
             return self.price - discount_amount
-        return self.price
+        return None
 
 
     def save(self, *args, **kwargs):
@@ -173,3 +178,30 @@ class Slider(models.Model):
         ]
 
 
+
+class DiscountedShowModel(models.Model):
+    image = models.ImageField("Image", upload_to='DiscountedShow/%Y/%m/%d')
+    min_discount = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(99)],
+    )
+    max_discount = models.IntegerField(
+        default=2,
+        validators=[MinValueValidator(2), MaxValueValidator(100)],
+    )
+
+
+    def get_discount_char(self):
+        return f'{self.min_discount} - {self.max_discount} %'
+
+    available = models.BooleanField(default=False)
+
+
+
+class HeartShapedProducts(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    id_product = models.PositiveIntegerField('id_products')
+
+
+    def __str__(self):
+        return f'{self.user.id} - {self.user.first_name}'

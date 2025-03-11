@@ -8,10 +8,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 
-from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color
+from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color, DiscountedShowModel
+
 from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
     UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, \
-    ProductFilterSerializer, ProductListFilterSerializer, ProductListFilterPostSerializer, ChatGPTPost
+    ProductFilterSerializer, ProductListFilterSerializer, ProductListFilterPostSerializer, ChatGPTPost, CategoryArajarkvoxSerializer, \
+    DiscountedShowSerializer
 
 import io
 from rest_framework.parsers import JSONParser
@@ -26,6 +28,7 @@ class CategoryView(APIView):
         categories = Category.objects.all()
         serializer = CategorySerializer(categories, many=True)
         return Response({
+
 
             "data": serializer.data
         }, status=status.HTTP_200_OK)
@@ -58,7 +61,12 @@ class ProductListView(APIView):
             products = products.filter(category=subcategory)
 
         serialized_products = ProductListSerializer(products, many=True).data
+        discount_char = DiscountedShowModel.objects.filter(available=True).last()
+
+        serialized_discount_char = DiscountedShowSerializer(discount_char).data if discount_char else None
+
         return Response({
+            "discount_char_vi": serialized_discount_char,
             "products": serialized_products,
         }, status=status.HTTP_200_OK)
 
@@ -167,17 +175,21 @@ class ProductFilterView(APIView):
         """
         Fetches all categories, brands, colors, and sizes for product filtering.
         """
+        category_arajarkvox = Category.objects.filter(is_recommended=True)[:4]
         categories = Category.objects.all()
         brands = Brand.objects.all()
         colors = Color.objects.all()
         sizes = Size.objects.all()
 
+
+        category_arajarkvox_serializer = CategoryArajarkvoxSerializer(category_arajarkvox, many=True)
         category_serializer = CategorySerializer(categories, many=True)
         brand_serializer = BrandSerializer(brands, many=True)
         color_serializer = ColorSerializer(colors, many=True)
         size_serializer = SizeSerializer(sizes, many=True)
 
         return Response({
+            'is_recommended': category_arajarkvox_serializer.data,
             'categories': category_serializer.data,
             'brands': brand_serializer.data,
             'colors': color_serializer.data,
@@ -277,7 +289,69 @@ class ProductFilterListView(APIView):
         if max_price is not None:
             products = products.filter(price__lte=max_price)
 
-        # ✅ Սերիալիզացնում ենք արդյունքները
+
+        serialized_products = ProductListSerializer(products, many=True).data
+
+        return Response({"products": serialized_products}, status=status.HTTP_200_OK)
+
+
+class ProductFilterDiscountedListView(APIView):
+    permission_classes = (AllowAny,)
+    serializer_class = ProductListFilterPostSerializer
+
+    def post(self, request):
+        # Վավերացնում ենք request-ի տվյալները
+        serializer = self.serializer_class(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Վավերացված տվյալները
+        validated_data = serializer.validated_data
+
+        # Ֆիլտրում ենք սկզբնական queryset-ը
+        products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED, discount_percentage__gt=0)
+
+
+
+        category_slug = validated_data.get('category')
+        if category_slug:
+            category = get_object_or_404(Category, slug=category_slug)
+            subcategories = SubCategory.objects.filter(category=category)
+            products = products.filter(category__in=subcategories)  # ⬅️ Փոխվել է subcategory֊ից category
+
+
+        subcategory_slug = validated_data.get('subcategory')
+        if category_slug and subcategory_slug:
+            subcategory = get_object_or_404(SubCategory, slug=subcategory_slug)
+            products = products.filter(category=subcategory)  # ⬅️ Նորից category֊ով
+
+
+        brand_slugs = validated_data.get('brand')
+        if brand_slugs:
+            brands = Brand.objects.filter(slug__in=brand_slugs)  # ստանում ենք brand-ների օբյեկտները slug-ներով
+            products = products.filter(brand__in=brands).distinct()  # ֆիլտրում ենք brand-ների համաձայն
+
+
+        colors_slug = validated_data.get('colors')
+        if colors_slug:
+            products = products.filter(colors__slug__in=colors_slug).distinct()
+
+
+        size_slugs = validated_data.get('size')
+        if size_slugs:
+            products = products.filter(size__slug__in=size_slugs).distinct()
+
+
+        min_price = validated_data.get('min_price')
+        max_price = validated_data.get('max_price')
+
+        if min_price is not None:
+            products = products.filter(get_final_price__gte=min_price)
+
+        if max_price is not None:
+            products = products.filter(get_final_price__lte=max_price)
+
         serialized_products = ProductListSerializer(products, many=True).data
 
         return Response({"products": serialized_products}, status=status.HTTP_200_OK)

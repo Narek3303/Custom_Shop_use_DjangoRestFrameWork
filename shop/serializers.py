@@ -1,6 +1,6 @@
 from django.db.models import DecimalField
 from rest_framework import serializers
-from .models import Category, SubCategory, Product, Image, Color, Size, Slider, Brand
+from .models import Category, SubCategory, Product, Image, Color, Size, Slider, Brand, DiscountedShowModel
 
 from rest_framework import serializers
 from .models import Category, SubCategory
@@ -16,23 +16,27 @@ class SubcategorySerializer(serializers.ModelSerializer):
 
 
 
+class CategoryArajarkvoxSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['id', 'image', 'name', 'slug']
 
 
 
 class CategorySerializer(serializers.ModelSerializer):
     subcategories = SubcategorySerializer(many=True, read_only=True, required=False)
-    recommended_subcategories = serializers.SerializerMethodField()
-
-
 
     class Meta:
         model = Category
-        fields = ["id", "name", 'slug', "subcategories"]
+        fields = ["id", "name", 'slug', 'image', "subcategories"]
 
 
-    def get_recommended_subcategories(self, obj):
-        recommended_subcategories = obj.subcategories.filter(is_recommended=True)[:8]
-        return SubcategorySerializer(recommended_subcategories, many=True).data
+
+
+
+
+
+
 
 
 
@@ -69,9 +73,11 @@ class ProductListSerializer(serializers.ModelSerializer):
 
 
 
+
+
     class Meta:
         model = Product
-        fields = ['id', 'name', 'image', 'price', 'colors', 'brand', 'size']
+        fields = ['id', 'name', 'image', 'price', 'get_final_price', 'colors', 'brand', 'size']
 
 
 class ProductListFilterSerializer(serializers.Serializer):
@@ -79,6 +85,16 @@ class ProductListFilterSerializer(serializers.Serializer):
     brand =  BrandSerializer(required=False)
     size = SizeSerializer(required=False)
 
+
+class DiscountedShowSerializer(serializers.ModelSerializer):
+    discount_char = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DiscountedShowModel
+        fields = ['id', 'image', 'discount_char']
+
+    def get_discount_char(self, obj):
+        return obj.get_discount_char()
 
 class ProductListFilterPostSerializer(serializers.Serializer):
     category = serializers.CharField(required=False, allow_blank=True)

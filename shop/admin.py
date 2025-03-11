@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import mark_safe
-from .models import Category, Product, SubCategory, Image, Size, Color, Slider, Brand
+from .models import Category, Product, SubCategory, Image, Size, Color, Slider, Brand, \
+                DiscountedShowModel
 
 
 @admin.register(Category)
@@ -15,6 +16,12 @@ class CategoryAdmin(admin.ModelAdmin):
 class SubCategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug', 'image']
     prepopulated_fields = {'slug': ('name',)}
+
+
+@admin.register(DiscountedShowModel)
+class DiscountedShowAdmin(admin.ModelAdmin):
+    list_display = ['image', 'min_discount', 'max_discount', 'available']
+    list_editable = ['available']
 
 
 
