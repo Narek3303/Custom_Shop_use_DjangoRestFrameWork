@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.utils.html import mark_safe
 from .models import Category, Product, SubCategory, Image, Size, Color, Slider, Brand, \
-                DiscountedShowModel
+                DiscountedShowModel, Wishlist, Review
+from .forms import ImageAdminForm
 
 
 @admin.register(Category)
@@ -55,6 +56,8 @@ class ProductAdmin(admin.ModelAdmin):
 
     show_first_image.short_description = 'First Image'
 
+
+
     class Meta:
         model = Product
 
@@ -66,6 +69,10 @@ admin.site.register(Product, ProductAdmin)
 class ImageAdmin(admin.ModelAdmin):
     list_display = ['image_preview']
     readonly_fields = ('image_preview',)
+
+@admin.register(Wishlist)
+class WishlistAdmin(admin.ModelAdmin):
+    list_display = ['user', 'product', 'notified']
 
 
 
@@ -89,3 +96,23 @@ class SliderAdmin(admin.ModelAdmin):
 class BrandAdmin(admin.ModelAdmin):
     list_display = ['name']
     prepopulated_fields = {'slug': ('name',)}
+
+
+
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('user', 'product', 'rating', 'status', 'created_at')
+    list_filter = ('status', 'product')
+    search_fields = ('user__email', 'product__name', 'status')
+    actions = ['approve_reviews', 'reject_reviews']
+
+    def approve_reviews(self, request, queryset):
+        queryset.update(status=Review.Status.APPROVED)
+        self.message_user(request, "Selected reviews have been approved.")
+    approve_reviews.short_description = "Approve selected reviews"
+
+    def reject_reviews(self, request, queryset):
+        queryset.update(status=Review.Status.REJECTED)
+        self.message_user(request, "Selected reviews have been rejected.")
+    reject_reviews.short_description = "Reject selected reviews"
+
+admin.site.register(Review, ReviewAdmin)

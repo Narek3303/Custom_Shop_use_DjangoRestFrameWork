@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from oauth2_provider import settings as oauth2_settings
+from dotenv import load_dotenv
 
 
 
@@ -23,20 +24,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-kldadasdwq12312234-0124023rid949102423kdoekdcojwr994132423-9--==-e+h1q&xyixl4f59ni2=b!+423m3ol(^i*2^(y=ea5)iv$5mt'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-# ALLOWED_HOSTS = ['*']
+
+ALLOWED_HOSTS = ['*']
 #
-ALLOWED_HOSTS = ['Narek330333.pythonanywhere.com']
+# ALLOWED_HOSTS = ['Narek330333.pythonanywhere.com']
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    # 'jazzmin',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -58,6 +58,8 @@ INSTALLED_APPS = [
 
 
 
+
+
     # 'dj_rest_auth',
     # 'dj_rest_auth.registration',
 
@@ -67,6 +69,22 @@ INSTALLED_APPS = [
     # 'orders.apps.OrdersConfig',
     # 'cart.apps.CartConfig',
 ]
+
+
+
+SUIT_CONFIG = {
+    'ADMIN_NAME': 'Ardar_Shop',
+    'MENU': (
+        'sites',
+        'auth',
+        'app1',
+        'app2',
+    )
+}
+
+
+
+
 
 
 
@@ -103,8 +121,6 @@ AUTHENTICATION_BACKENDS = (
 
 
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '417165015841-jptju8v67ap2kuf3baugovsct1sth74i.apps.googleusercontent.com'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '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'
 
 
 
@@ -118,21 +134,6 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 
 
 AUTH_USER_MODEL = 'users.CustomUser'
-
-
-
-
-
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
-EMAIL_HOST_USER = 'margaryannarek056@gmail.com'
-EMAIL_HOST_PASSWORD = 'xzletqoosqccdday'
-DEFAULT_FROM_EMAIL = 'margaryannarek056@gmail.com'
-EMAIL_FROM = 'margaryannarek056@gmail.com'
-EMAIL_BCC = 'margaryannarek056@gmail.com'
 
 
 
@@ -235,19 +236,16 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-# STATIC_URL = "static/"
-#
-# STATIC_ROOT = BASE_DIR / "staticfiles"
-#
-#
-# MEDIA_URL = "/media/"
-# MEDIA_ROOT = BASE_DIR / "media"
-
 STATIC_URL = "static/"
-STATIC_ROOT = "/home/Narek330333/Ardar_Blog/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
-MEDIA_ROOT = "/home/Narek330333/Ardar_Blog/media/"
-
+MEDIA_ROOT = BASE_DIR / "media"
+#
+# STATIC_URL = "static/"
+# STATIC_ROOT = "/home/Narek330333/Ardar_Blog/static/"
+# MEDIA_URL = "/media/"
+# MEDIA_ROOT = "/home/Narek330333/Ardar_Blog/media/"
+#
 
 
 
@@ -270,8 +268,12 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',  # django-oauth-toolkit >= 1.0.0
         'drf_social_oauth2.authentication.SocialAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
 
-    ]
+    ],
+        'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 }
 
 
@@ -305,3 +307,23 @@ CART_SESSION_ID = 'cart'
 
 
 
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+DEBUG = os.getenv("DEBUG", "False") == "True"
+
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
+
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") == "True"
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
+EMAIL_FROM = os.getenv("EMAIL_FROM")
+EMAIL_BCC = os.getenv("EMAIL_BCC")

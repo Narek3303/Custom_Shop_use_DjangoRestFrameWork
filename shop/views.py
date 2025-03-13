@@ -8,13 +8,18 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 
-from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color, DiscountedShowModel
+from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color, DiscountedShowModel, Wishlist, \
+                        Review
 
 from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
     UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, \
     ProductFilterSerializer, ProductListFilterSerializer, ProductListFilterPostSerializer, ChatGPTPost, CategoryArajarkvoxSerializer, \
-    DiscountedShowSerializer
+    DiscountedShowSerializer, ReviewSerializer
 
+
+from rest_framework import generics, permissions
+from .models import Wishlist
+from .serializers import WishlistSerializer
 import io
 from rest_framework.parsers import JSONParser
 
@@ -227,135 +232,62 @@ def create_products(request):
     return JsonResponse({'status': 'Products created successfully!'}, status=status.HTTP_201_CREATED)
 
 
-
 class ProductFilterListView(APIView):
     permission_classes = (AllowAny,)
     serializer_class = ProductListFilterPostSerializer
 
     def post(self, request):
-        # Վավերացնում ենք request-ի տվյալները
         serializer = self.serializer_class(data=request.data)
 
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        # Վավերացված տվյալները
         validated_data = serializer.validated_data
+        discounted = validated_data.get('discounted', False)  # Ստուգում ենք, արդյոք ֆիլտրում ենք զեղչված ապրանքները
 
-        # Ֆիլտրում ենք սկզբնական queryset-ը
         products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
 
-        # ✅ Կատեգորիայի ֆիլտր
-        # ✅ Կատեգորիայի ֆիլտր
-        category_slug = validated_data.get('category')
-        if category_slug:
-            category = get_object_or_404(Category, slug=category_slug)
-            subcategories = SubCategory.objects.filter(category=category)
-            products = products.filter(category__in=subcategories)  # ⬅️ Փոխվել է subcategory֊ից category
-
-
-            # ✅ Ենթակատեգորիայի ֆիլտր
-        subcategory_slug = validated_data.get('subcategory')
-        if category_slug and subcategory_slug:
-            subcategory = get_object_or_404(SubCategory, slug=subcategory_slug)
-            products = products.filter(category=subcategory)  # ⬅️ Նորից category֊ով
-
-
-
-        # ✅ Բրենդի ֆիլտր (Multiple Choice)
-        brand_slugs = validated_data.get('brand')
-        if brand_slugs:
-            brands = Brand.objects.filter(slug__in=brand_slugs)  # ստանում ենք brand-ների օբյեկտները slug-ներով
-            products = products.filter(brand__in=brands).distinct()  # ֆիլտրում ենք brand-ների համաձայն
-
-        # ✅ Գույների ֆիլտր (Multiple Choice)
-        colors_slug = validated_data.get('colors')
-        if colors_slug:
-            products = products.filter(colors__slug__in=colors_slug).distinct()
-
-        # ✅ Չափերի ֆիլտր (Multiple Choice)
-        size_slugs = validated_data.get('size')
-        if size_slugs:
-            products = products.filter(size__slug__in=size_slugs).distinct()
-
-
-        # ✅ Գին (Min/Max)
-        min_price = validated_data.get('min_price')
-        max_price = validated_data.get('max_price')
-
-        if min_price is not None:
-            products = products.filter(price__gte=min_price)
-
-        if max_price is not None:
-            products = products.filter(price__lte=max_price)
-
-
-        serialized_products = ProductListSerializer(products, many=True).data
-
-        return Response({"products": serialized_products}, status=status.HTTP_200_OK)
-
-
-class ProductFilterDiscountedListView(APIView):
-    permission_classes = (AllowAny,)
-    serializer_class = ProductListFilterPostSerializer
-
-    def post(self, request):
-        # Վավերացնում ենք request-ի տվյալները
-        serializer = self.serializer_class(data=request.data)
-
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # Վավերացված տվյալները
-        validated_data = serializer.validated_data
-
-        # Ֆիլտրում ենք սկզբնական queryset-ը
-        products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED, discount_percentage__gt=0)
-
-
+        if discounted:
+            products = products.filter(discount_percentage__gt=0)
 
         category_slug = validated_data.get('category')
         if category_slug:
             category = get_object_or_404(Category, slug=category_slug)
             subcategories = SubCategory.objects.filter(category=category)
-            products = products.filter(category__in=subcategories)  # ⬅️ Փոխվել է subcategory֊ից category
-
+            products = products.filter(category__in=subcategories)
 
         subcategory_slug = validated_data.get('subcategory')
         if category_slug and subcategory_slug:
             subcategory = get_object_or_404(SubCategory, slug=subcategory_slug)
-            products = products.filter(category=subcategory)  # ⬅️ Նորից category֊ով
-
+            products = products.filter(category=subcategory)
 
         brand_slugs = validated_data.get('brand')
         if brand_slugs:
-            brands = Brand.objects.filter(slug__in=brand_slugs)  # ստանում ենք brand-ների օբյեկտները slug-ներով
-            products = products.filter(brand__in=brands).distinct()  # ֆիլտրում ենք brand-ների համաձայն
-
+            brands = Brand.objects.filter(slug__in=brand_slugs)
+            products = products.filter(brand__in=brands).distinct()
 
         colors_slug = validated_data.get('colors')
         if colors_slug:
             products = products.filter(colors__slug__in=colors_slug).distinct()
 
-
         size_slugs = validated_data.get('size')
         if size_slugs:
             products = products.filter(size__slug__in=size_slugs).distinct()
-
 
         min_price = validated_data.get('min_price')
         max_price = validated_data.get('max_price')
 
         if min_price is not None:
-            products = products.filter(get_final_price__gte=min_price)
+            price_field = 'get_final_price' if discounted else 'price'
+            products = products.filter(**{f'{price_field}__gte': min_price})
 
         if max_price is not None:
-            products = products.filter(get_final_price__lte=max_price)
+            price_field = 'get_final_price' if discounted else 'price'
+            products = products.filter(**{f'{price_field}__lte': max_price})
 
         serialized_products = ProductListSerializer(products, many=True).data
 
         return Response({"products": serialized_products}, status=status.HTTP_200_OK)
-
 
 
 # class ChatGPTView(APIView):
@@ -368,5 +300,64 @@ class ProductFilterDiscountedListView(APIView):
 #
 #         if not serializer.is_valid():
 #             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class ToggleWishlistView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, product_id):
+        product = Product.objects.get(id=product_id)
+        wishlist_item, created = Wishlist.objects.get_or_create(user=request.user, product=product)
+
+        if not created:
+            wishlist_item.delete()
+            return Response({'message': 'Removed from wishlist'}, status=status.HTTP_200_OK)
+
+        return Response({'message': 'Added to wishlist'}, status=status.HTTP_201_CREATED)
+
+
+class WishListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = WishlistSerializer
+
+    def get(self, request):
+        wishlist_data = Wishlist.objects.filter(user=request.user)
+        serializer = self.serializer_class(wishlist_data, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ReviewView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, product_id):
+        reviews = Review.objects.filter(product_id=product_id, status='AP')
+        serializer = ReviewSerializer(reviews, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, product_id):
+        data = request.data.copy()
+        data['product'] = product_id
+        serializer = ReviewSerializer(data=data, context={'request': request})
+        if serializer.is_valid():
+            review = serializer.save()
+            review.send_notification()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminReviewModeration(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, review_id):
+        review = Review.objects.get(id=review_id)
+        action = request.data.get('action')
+        if action == 'approve':
+            review.status = Review.Status.APPROVED
+        elif action == 'reject':
+            review.status = Review.Status.REJECTED
+        review.save()
+        return Response({'message': f'Review {review.status.lower()} successfully'}, status=status.HTTP_200_OK)
 
 

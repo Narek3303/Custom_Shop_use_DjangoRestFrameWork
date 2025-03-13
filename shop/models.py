@@ -5,8 +5,19 @@ from django.utils.html import mark_safe
 from django.urls import reverse
 from taggit.managers import TaggableManager
 from django.core.validators import MaxValueValidator, MinValueValidator
-
 from django.conf import settings
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.utils.timezone import now
+from django.core.mail import send_mail
+from rest_framework import serializers, permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+
+
+User = get_user_model()
+
 
 
 class PublishedManager(models.Manager):
@@ -113,7 +124,7 @@ class Product(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        return reverse('product_detail', args=[self.slug])
+        return reverse('product_detail', args=[self.slug, self.id])
 
     def get_final_price(self):
         """
@@ -198,10 +209,49 @@ class DiscountedShowModel(models.Model):
 
 
 
-class HeartShapedProducts(models.Model):
+class Wishlist(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    id_product = models.PositiveIntegerField('id_products')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    added_at = models.DateTimeField(auto_now_add=True)
+    notified = models.BooleanField(default=False, null=True)
 
+    class Meta:
+        unique_together = ('user', 'product')
+
+
+
+
+
+class Review(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'PD', 'Pending'
+        APPROVED = 'AP', 'Approved'
+        REJECTED = 'RJ', 'Rejected'
+
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
+    rating = models.PositiveIntegerField(default=5)
+    comment = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=2, choices=Status.choices, default=Status.PENDING
+    )
+
+    class Meta:
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.user.id} - {self.user.first_name}'
+        return f"{self.user.email} - {self.product.name} ({self.rating}⭐)"
+
+    def send_notification(self):
+        """ Notify the admin about the new review """
+        send_mail(
+            subject=f'New Review for {self.product.name}',
+            message=f'Review from {self.user.email}:\nRating: {self.rating}\nComment: {self.comment}',
+            from_email='noreply@yourshop.com',
+            recipient_list=['admin@yourshop.com']
+        )
+
+
+
+

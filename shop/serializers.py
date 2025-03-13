@@ -1,6 +1,7 @@
 from django.db.models import DecimalField
 from rest_framework import serializers
-from .models import Category, SubCategory, Product, Image, Color, Size, Slider, Brand, DiscountedShowModel
+from .models import Category, SubCategory, Product, Image, Color, Size, Slider, Brand, DiscountedShowModel, \
+      Wishlist, Review
 
 from rest_framework import serializers
 from .models import Category, SubCategory
@@ -115,6 +116,11 @@ class ProductListFilterPostSerializer(serializers.Serializer):
     max_price = serializers.DecimalField(
         required=False, max_digits=10, decimal_places=2, allow_null=True
     )
+    discounted = serializers.BooleanField(default=False)
+
+
+
+
 
 
 
@@ -166,3 +172,31 @@ class ProductFilterSerializer(serializers.Serializer):
 class ChatGPTPost(serializers.ModelSerializer):
     model = Product
     fields = '__all__'
+
+
+
+
+
+
+class WishlistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Wishlist
+        fields = ['id', 'user', 'product', 'added_at', 'notified']
+
+
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['id', 'product', 'user', 'rating', 'comment', 'created_at', 'status']
+        read_only_fields = ['user', 'status']
+
+    def validate_rating(self, value):
+        if value < 1 or value > 5:
+            raise serializers.ValidationError('Rating must be between 1 and 5')
+        return value
+
+
+    def create(self, validated_data):
+
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
