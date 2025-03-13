@@ -95,7 +95,7 @@ class Product(models.Model):
     brand = models.ForeignKey('Brand', verbose_name='Brand', related_name='products', null=True, on_delete=models.CASCADE)
     image = models.ManyToManyField('Image', verbose_name='Images', related_name='products')
     size = models.ManyToManyField('Size', verbose_name='Sizes', related_name='products')
-    colors = models.ManyToManyField('Color', related_name="products", blank=True)
+    colors = models.ManyToManyField('Color', related_name="products")
     description = models.TextField('Product Description', blank=True)
     delivery_service = models.TextField('Delivery Service', blank=True, null=True)
     price = models.DecimalField('Price', max_digits=10, decimal_places=2)
@@ -111,6 +111,8 @@ class Product(models.Model):
     tags = TaggableManager(verbose_name='Tags')
     objects = models.Manager()  # Default manager
     published = PublishedManager()  # Custom manager for published products
+
+
 
     class Meta:
         ordering = ['name']

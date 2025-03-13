@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .views import ProductListView, ProductFilterListView, ToggleWishlistView, WishListView, \
+from .views import ProductListView, ProductFilterListView, ToggleWishlistView, WishlistProductsView, \
                     ReviewView, AdminReviewModeration
 
 
@@ -16,7 +16,7 @@ urlpatterns = [
     path('products/<slug:category_slug>/<slug:subcategory_slug>/', ProductListView.as_view(),
          name='product_list_by_subcategory'),
     path('wishlist/toggle/<int:product_id>/', ToggleWishlistView.as_view(), name='wishlist-toggle'),
-    path('wishlist_all/', WishListView.as_view(), name='wishlist'),
+    path('wishlist_all/', WishlistProductsView.as_view(), name='wishlist'),
     path('Review/products/<int:product_id>/reviews/', ReviewView.as_view(), name='product-reviews'),
     path('admin/reviews/<int:review_id>/', AdminReviewModeration.as_view(), name='review-moderation'),
 

@@ -34,6 +34,9 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 
+class LikedSerializer(serializers.Serializer):
+    liked = serializers.BooleanField(default=False)
+
 
 
 
@@ -68,17 +71,19 @@ class BrandSerializer(serializers.ModelSerializer):
 class ProductListSerializer(serializers.ModelSerializer):
     image = ImageSerializer(many=True)
     colors = ColorSerializer(many=True)
-    brand =  BrandSerializer()
+    brand = BrandSerializer()
     size = SizeSerializer(many=True)
-
-
-
-
-
+    liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'image', 'price', 'get_final_price', 'colors', 'brand', 'size']
+        fields = ['id', 'name', 'image', 'price', 'get_final_price', 'colors', 'brand', 'size', 'liked']
+
+    def get_liked(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            return Wishlist.objects.filter(user=user, product=obj).exists()
+        return False
 
 
 class ProductListFilterSerializer(serializers.Serializer):
@@ -179,6 +184,8 @@ class ChatGPTPost(serializers.ModelSerializer):
 
 
 class WishlistSerializer(serializers.ModelSerializer):
+
+
     class Meta:
         model = Wishlist
         fields = ['id', 'user', 'product', 'added_at', 'notified']

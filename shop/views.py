@@ -46,16 +46,12 @@ class ProductListView(APIView):
     permission_classes = (AllowAny,)
     serializer_class = ProductListSerializer
 
-
-
     def get(self, request, category_slug=None, subcategory_slug=None):
-
-
-
         category = None
         subcategory = None
 
         products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
+
         if category_slug:
             category = get_object_or_404(Category, slug=category_slug)
             subcategories = SubCategory.objects.filter(category=category)
@@ -65,9 +61,9 @@ class ProductListView(APIView):
             subcategory = get_object_or_404(SubCategory, slug=subcategory_slug, category=category)
             products = products.filter(category=subcategory)
 
-        serialized_products = ProductListSerializer(products, many=True).data
+        # Wishlist-ի ստուգում
+        serialized_products = ProductListSerializer(products, many=True, context={'request': request}).data
         discount_char = DiscountedShowModel.objects.filter(available=True).last()
-
         serialized_discount_char = DiscountedShowSerializer(discount_char).data if discount_char else None
 
         return Response({
@@ -243,7 +239,7 @@ class ProductFilterListView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         validated_data = serializer.validated_data
-        discounted = validated_data.get('discounted', False)  # Ստուգում ենք, արդյոք ֆիլտրում ենք զեղչված ապրանքները
+        discounted = validated_data.get('discounted', False)
 
         products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
 
@@ -285,7 +281,7 @@ class ProductFilterListView(APIView):
             price_field = 'get_final_price' if discounted else 'price'
             products = products.filter(**{f'{price_field}__lte': max_price})
 
-        serialized_products = ProductListSerializer(products, many=True).data
+        serialized_products = ProductListSerializer(products, many=True, context={'request': request}).data
 
         return Response({"products": serialized_products}, status=status.HTTP_200_OK)
 
@@ -318,13 +314,13 @@ class ToggleWishlistView(APIView):
         return Response({'message': 'Added to wishlist'}, status=status.HTTP_201_CREATED)
 
 
-class WishListView(APIView):
+class WishlistProductsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = WishlistSerializer
 
     def get(self, request):
-        wishlist_data = Wishlist.objects.filter(user=request.user)
-        serializer = self.serializer_class(wishlist_data, many=True)
+        wishlist_product_ids = Wishlist.objects.filter(user=request.user).values_list('product_id', flat=True)
+        products = Product.objects.filter(id__in=wishlist_product_ids)
+        serializer = ProductListSerializer(products, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
