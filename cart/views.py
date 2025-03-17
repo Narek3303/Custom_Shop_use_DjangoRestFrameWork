@@ -7,43 +7,31 @@ from .serializers import CartSerializer
 
 class CartDetailAPIView(APIView):
     """
-    Retrieve cart information, including all cart items, total price, and item count.
+    Retrieve cart information, including all cart items, total price,
+    discount, shipping cost, and item count.
     """
 
     def get(self, request):
         cart = Cart(request)
+        # Calculate total price, discount, shipping, etc.
         serializer = CartSerializer({
             'total_price': cart.get_total_price(),
             'total_items': len(cart),
+            'discount': cart.get_discount(),
+            'shipping_cost': cart.get_shipping_cost(),
+            'total_with_shipping': cart.get_total_with_shipping(),
             'items': [{
                 'product_id': item['product'].id,
+                'product_name': item['product'].name,
                 'quantity': item['quantity'],
                 'price': item['price'],
                 'total_price': item['total_price'],
-                'product_name': item['product'].name,
             } for item in cart],
         })
         return Response(serializer.data)
 
 
-class CartAddAPIView(APIView):
-    """
-    Add a product to the cart.
-    """
 
-    def post(self, request, product_id):
-        cart = Cart(request)
-        try:
-            product = Product.objects.get(id=product_id)
-        except Product.DoesNotExist:
-            return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
-
-        quantity = int(request.data.get('quantity', 1))
-        color = request.data.get('color', '')
-        size = request.data.get('size', '')
-        cart.add(product=product, color=color, size=size, quantity=quantity)
-
-        return Response({"message": "Product added to cart successfully"}, status=status.HTTP_201_CREATED)
 
 
 class CartRemoveAPIView(APIView):
@@ -98,4 +86,10 @@ class CartTotalPriceAPIView(APIView):
 
     def get(self, request):
         cart = Cart(request)
-        return Response({"total_price": str(cart.get_total_price())}, status=status.HTTP_200_OK)
+        total_price = cart.get_total_price()
+        total_with_shipping = cart.get_total_with_shipping()
+        return Response({
+            "total_price": str(total_price),
+            "total_with_shipping": str(total_with_shipping),
+        }, status=status.HTTP_200_OK)
+

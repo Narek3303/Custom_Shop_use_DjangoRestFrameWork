@@ -2,8 +2,31 @@ from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from decimal import Decimal
 from django.utils.translation import gettext_lazy as _
-from coupons.models import Coupon
+from coupon.models import Coupon
 from shop.models import Product  # Assuming this model is in your shop app
+
+
+
+class OrderStatus(models.Model):
+    name = models.CharField(_('status name'), max_length=50)
+    description = models.TextField(_('description'), blank=True)
+
+    def __str__(self):
+        return self.name
+
+
+class OrderManager(models.Manager):
+    def paid_orders(self):
+        """Վերադարձնում է միայն վճարված պատվերները"""
+        return self.filter(paid=True)
+
+    def unpaid_orders(self):
+        """Վերադարձնում է միայն չվճարված պատվերները"""
+        return self.filter(paid=False)
+
+    def orders_by_date_range(self, start_date, end_date):
+        """Վերադարձնում է պատվերները ըստ ամսաթվային միջակայքի"""
+        return self.filter(created__range=[start_date, end_date])
 
 
 class Order(models.Model):
@@ -40,6 +63,7 @@ class Order(models.Model):
         choices=OrderStatus.choices,
         default=OrderStatus.PENDING,
     )
+    objects = OrderManager()
 
     class Meta:
         ordering = ['-created']

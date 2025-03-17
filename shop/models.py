@@ -13,6 +13,7 @@ from django.core.mail import send_mail
 from rest_framework import serializers, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from djmoney.models.fields import MoneyField
 
 
 
@@ -98,7 +99,7 @@ class Product(models.Model):
     colors = models.ManyToManyField('Color', related_name="products")
     description = models.TextField('Product Description', blank=True)
     delivery_service = models.TextField('Delivery Service', blank=True, null=True)
-    price = models.DecimalField('Price', max_digits=10, decimal_places=2)
+    price = models.DecimalField('Price (USD)', max_digits=10, decimal_places=2)
     discount_percentage = models.DecimalField('Discount Percentage', max_digits=10, decimal_places=2, default=0, null=True)
     available = models.BooleanField(default=True)
     created = models.DateTimeField(auto_now_add=True)
@@ -111,6 +112,14 @@ class Product(models.Model):
     tags = TaggableManager(verbose_name='Tags')
     objects = models.Manager()  # Default manager
     published = PublishedManager()  # Custom manager for published products
+    article = models.CharField(max_length=20, blank=True)
+    composition = models.CharField(max_length=255, blank=True)
+    gender = models.CharField(max_length=10,  blank=True,
+                              choices=[('Мужской', 'Мужской'), ('Женский', 'Женский'), ('Унисекс', 'Унисекс')])
+    fit_type = models.CharField(max_length=50, blank=True)
+    pocket_type = models.CharField(max_length=100, blank=True)
+    model_features = models.CharField(max_length=255, blank=True)
+    care_instructions = models.CharField(max_length=255, blank=True)
 
 
 
@@ -129,13 +138,17 @@ class Product(models.Model):
         return reverse('product_detail', args=[self.slug, self.id])
 
     def get_final_price(self):
-        """
-        Calculate the final price after applying the discount percentage
-        """
         if self.discount_percentage and self.discount_percentage > 0:
             discount_amount = (self.discount_percentage / 100) * self.price
             return self.price - discount_amount
         return None
+
+    def get_price(self):
+        currency = Currency.objects.filter(code="")
+
+
+
+
 
 
     def save(self, *args, **kwargs):
@@ -257,3 +270,35 @@ class Review(models.Model):
 
 
 
+class Currency(models.Model):
+    code = models.CharField(max_length=3, unique=True)  # USD, EUR, AMD
+    name = models.CharField(max_length=50)
+    exchange_rate = models.DecimalField(max_digits=10, decimal_places=4, default=1.0)  # 1 USD = X
+
+    def __str__(self):
+        return f"{self.name} ({self.code}) - {self.exchange_rate}"
+
+    class Meta:
+        ordering = ['code']
+
+    def get_price_in_currency(self, price_in_usd):
+        """Փոխակերպում է գինը USD-ից տվյալ արժույթով"""
+        if self.exchange_rate and price_in_usd is not None:
+            return round(price_in_usd * self.exchange_rate, 2)
+        return None
+
+    def save(self, *args, **kwargs):
+        if self.exchange_rate <= 0:
+            raise ValueError("Exchange rate must be greater than zero.")
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_base_currency(cls):
+        """Վերադարձնում է հիմնական արժույթը (օրինակ՝ USD)"""
+        return cls.objects.filter(exchange_rate=1.0).first()
+
+
+class SizePrice(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="size_prices")
+    size = models.ForeignKey(Size, on_delete=models.CASCADE)
+    price = models.DecimalField(max_digits=10, decimal_places=2)

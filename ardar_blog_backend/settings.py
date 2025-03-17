@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from oauth2_provider import settings as oauth2_settings
 from dotenv import load_dotenv
+from celery.schedules import crontab
 
 
 
@@ -31,6 +32,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 ALLOWED_HOSTS = ['*']
 #
 # ALLOWED_HOSTS = ['Narek330333.pythonanywhere.com']
+
+
+
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+
+
+
+CELERY_BEAT_SCHEDULE = {
+    'update-currency-every-day': {
+        'task': 'products.tasks.update_currency_exchange_rates',
+        'schedule': crontab(hour=0, minute=0),  # Կթարմացվի ամեն օր կեսգիշերին
+    },
+}
+
+
 
 
 # Application definition
@@ -63,12 +82,30 @@ INSTALLED_APPS = [
     # 'dj_rest_auth',
     # 'dj_rest_auth.registration',
 
-
+    'coupon.apps.CouponConfig',
     'users.apps.UsersConfig',
     'shop.apps.ShopConfig',
-    # 'orders.apps.OrdersConfig',
-    # 'cart.apps.CartConfig',
+    'orders.apps.OrdersConfig',
+    'cart.apps.CartConfig',
+
 ]
+
+
+
+
+
+
+INSTALLED_APPS += [
+    'exchange',
+    'django_celery_beat',
+    'djmoney',
+]
+
+
+
+
+
+
 
 
 
@@ -139,9 +176,11 @@ AUTH_USER_MODEL = 'users.CustomUser'
 
 
 
+CORS_ORIGIN_ALLOW_ALL = True
 
 
 MIDDLEWARE = [
+
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -151,12 +190,19 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
+    'shop.middleware.CurrencyMiddleware',
     # 'allauth.account.middleware.AccountMiddleware',
 
 
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
+
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Օգտագործում ենք DB session
+SESSION_COOKIE_AGE = 86400  # Session-ը կապրի 24 ժամ (կամ ըստ պահանջի)
+SESSION_SAVE_EVERY_REQUEST = True  # Պահպանի session-ը ամեն հարցման ժամանակ
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Չի փակվի browser-ը փակելուց հետո
+
 
 
 ROOT_URLCONF = 'ardar_blog_backend.urls'
@@ -327,3 +373,6 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
 EMAIL_BCC = os.getenv("EMAIL_BCC")
+
+
+EXCHANGE_RATE_API_KEY = os.getenv("EXCHANGE_RATE_API_KEY")

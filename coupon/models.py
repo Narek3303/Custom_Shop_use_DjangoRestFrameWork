@@ -5,6 +5,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 class Coupon(models.Model):
     code = models.CharField(max_length=50, unique=True)
     valid_from = models.DateTimeField()
+    is_used = models.BooleanField(default=False)  # Ավելացնում ենք դաշտը՝ արդյոք կուպոնը օգտագործված է
+    is_one_time_use = models.BooleanField(default=True)  # Եթե կուպոնը մեկ անգամ է օգտագործվում
     valid_to = models.DateTimeField()
     discount = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)],

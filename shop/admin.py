@@ -1,14 +1,23 @@
 from django.contrib import admin
 from django.utils.html import mark_safe
 from .models import Category, Product, SubCategory, Image, Size, Color, Slider, Brand, \
-                DiscountedShowModel, Wishlist, Review
+                DiscountedShowModel, Wishlist, Review, Currency, SizePrice
 from .forms import ImageAdminForm
+
+
+@admin.register(Currency)
+class CurrencyAdmin(admin.ModelAdmin):
+    list_display = ['name', 'code', 'exchange_rate']
+
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug']
     prepopulated_fields = {'slug': ('name',)}
+
+
+
 
 
 
@@ -116,3 +125,9 @@ class ReviewAdmin(admin.ModelAdmin):
     reject_reviews.short_description = "Reject selected reviews"
 
 admin.site.register(Review, ReviewAdmin)
+
+
+@admin.register(SizePrice)
+class SizePriceAdmin(admin.ModelAdmin):
+    list_display = ['product', 'price', 'size']
+

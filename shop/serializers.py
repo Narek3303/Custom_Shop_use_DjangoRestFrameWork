@@ -1,8 +1,8 @@
 from django.db.models import DecimalField
 from rest_framework import serializers
 from .models import Category, SubCategory, Product, Image, Color, Size, Slider, Brand, DiscountedShowModel, \
-      Wishlist, Review
-
+      Wishlist, Review, Currency, SizePrice
+from decimal import Decimal
 from rest_framework import serializers
 from .models import Category, SubCategory
 
@@ -21,6 +21,26 @@ class CategoryArajarkvoxSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'image', 'name', 'slug']
+
+
+
+class PriceCurrencySerializer(serializers.Serializer):
+    price_currency = serializers.ChoiceField(
+        choices=["USD", "AMD", "RUB"],  # ✅ Ընդունում ենք միայն նշված արժույթները
+        required=False
+    )
+
+
+
+
+    def get_conversion_rate(self, currency_code):
+        try:
+            currency = Currency.objects.get(code=currency_code)
+            return currency.exchange_rate
+        except Currency.DoesNotExist:
+            return Decimal(1.0)
+
+
 
 
 
@@ -45,9 +65,19 @@ class LikedSerializer(serializers.Serializer):
 
 
 class ImageSerializer(serializers.ModelSerializer):
+
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = Image
         fields = ["id", "image"]
+
+
+    def get_image(self, obj):
+        if obj.image:
+            return obj.image.url  # վերադարձնում է միայն համեմատական URL (ոչ լրիվ)
+        return None
+
 
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -74,16 +104,35 @@ class ProductListSerializer(serializers.ModelSerializer):
     brand = BrandSerializer()
     size = SizeSerializer(many=True)
     liked = serializers.SerializerMethodField()
+    final_price = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'image', 'price', 'get_final_price', 'colors', 'brand', 'size', 'liked']
+        fields = [
+            'id', 'name', 'image', 'price', 'final_price',
+            'colors', 'brand', 'size', 'liked',
+        ]
 
     def get_liked(self, obj):
         user = self.context['request'].user
         if user.is_authenticated:
             return Wishlist.objects.filter(user=user, product=obj).exists()
         return False
+
+    def get_price(self, obj):
+        request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))  # Middleware-ից վերցնում ենք
+        return obj.price * conversion_rate
+
+    def get_final_price(self, obj):
+        request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))  # Middleware-ից վերցնում ենք
+
+        final_price = obj.get_final_price()  # Product մոդելի մեթոդը
+        return final_price * conversion_rate if final_price is not None else None
+
 
 
 class ProductListFilterSerializer(serializers.Serializer):
@@ -123,12 +172,19 @@ class ProductListFilterPostSerializer(serializers.Serializer):
     )
     discounted = serializers.BooleanField(default=False)
 
+    price_currency = serializers.ChoiceField(
+        choices=["USD", "AMD", "RUB"],  # ✅ Ընդունում ենք միայն նշված արժույթները
+        required=False
+    )
 
 
 
+class SizePriceSerializer(serializers.ModelSerializer):
+    size = SizeSerializer()  # Վերադարձնում ենք չափսի տվյալները
 
-
-
+    class Meta:
+        model = SizePrice
+        fields = ['size', 'price', ]
 
 
 
@@ -136,17 +192,59 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     image = ImageSerializer(many=True)
     colors = ColorSerializer(many=True)
     size = SizeSerializer(many=True)
+    size_prices = SizePriceSerializer(many=True, read_only=True)
+    brand = BrandSerializer()
     tags = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()
+    final_price = serializers.SerializerMethodField()
+    liked = serializers.SerializerMethodField()
+
+
+
 
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'image', 'price', 'colors', 'size', 'description', 'tags']
+        fields = ['id', 'name', 'image', 'price', 'final_price', 'colors', 'size', 'brand', 'description', 'delivery_service',
+                  'tags', 'liked', 'size_prices']
+
 
     def get_tags(self, obj):
         return [tag.name for tag in obj.tags.all()]
 
 
+    def get_liked(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            return Wishlist.objects.filter(user=user, product=obj).exists()
+
+        return False
+
+    def get_price(self, obj):
+        request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))  # Middleware-ից վերցնում ենք փոխարժեքը
+
+        size_id = request.query_params.get('size_id')
+        if size_id:
+            size_price = obj.size_prices.filter(size__id=size_id).first()
+            if size_price:
+                return size_price.price * conversion_rate
+
+        return obj.price * conversion_rate
+
+    def get_final_price(self, obj):
+        request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))  # Middleware-ից վերցնում ենք փոխարժեքը
+
+        size_id = request.query_params.get('size_id')
+        if size_id:
+            size_price = obj.size_prices.filter(size__id=size_id).first()
+            if size_price:
+                final_price = size_price.price - (size_price.price * obj.discount_percentage / 100)
+                return final_price * conversion_rate
+
+        final_price = obj.get_final_price()
+        return final_price * conversion_rate if final_price is not None else None
 
 
 class UserTokenCheckSerializer(serializers.Serializer):
@@ -207,3 +305,13 @@ class ReviewSerializer(serializers.ModelSerializer):
 
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+
+
+
+
+class CartAddPostSerializer(serializers.Serializer):
+    colors = serializers.CharField(max_length=20, required=True)
+    size = serializers.CharField(required=True, max_length=4)
+    quantity = serializers.IntegerField()
+    override = serializers.BooleanField(default=False)
