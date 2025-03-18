@@ -8,17 +8,22 @@ from coupon.models import Coupon
 
 class Cart:
     def __init__(self, request):
-        """
-        Initialize the cart.
-        """
         self.session = request.session
-        cart = self.session.get(settings.CART_SESSION_ID)
-        if not cart:
-            # Save an empty cart in the session if none exists
-            cart = self.session[settings.CART_SESSION_ID] = {}
+        cart = self.session.get(settings.CART_SESSION_ID, {})
         self.cart = cart
         self.coupon = None
         self.discount = Decimal(0)
+        self.request = request
+
+        # Վերականգնում ենք կուպոնը session-ից
+        coupon_code = self.session.get('coupon_code')
+        if coupon_code:
+            try:
+                self.coupon = Coupon.objects.get(code=coupon_code)
+                self.discount = self.get_total_price() * (self.coupon.discount / 100)
+            except Coupon.DoesNotExist:
+                self.coupon = None
+                self.discount = Decimal(0)
 
     def __iter__(self):
         """
@@ -44,7 +49,7 @@ class Cart:
         """
         return sum(item['quantity'] for item in self.cart.values())
 
-    def add(self, product, color, size, quantity=1, override=False):
+    def add(self, product, color, size_id, price, final_price, quantity=1, override=False,):
         """
         Add a product to the cart or update its quantity.
         """
@@ -52,12 +57,11 @@ class Cart:
         if product_id not in self.cart:
             # Ստեղծում ենք նոր արտադրանք
             self.cart[product_id] = {
-                'size': size,
+                'size_id': size_id,
                 'color': color,
                 'quantity': quantity,
-                'price': Decimal(product.price),  # Ստանում ենք թվային արժեք
-                'final_price': Decimal(product.final_price) if product.final_price else Decimal(product.price)
-                # Ստուգում ենք final_price
+                'price': price,
+                'final_price': final_price
             }
         else:
             # Ավելացնում ենք քանակը կամ փոխում այն
@@ -81,8 +85,9 @@ class Cart:
             self.save()
 
     def clear(self):
-        # Remove cart from session
-        del self.session[settings.CART_SESSION_ID]
+        # Remove cart from session if it exists
+        self.session.pop(settings.CART_SESSION_ID, None)
+        self.session.pop('coupon_code', None)
         self.save()
 
     def get_total_price(self):
@@ -107,11 +112,11 @@ class Cart:
         total = self.get_total_price()
         return total - self.get_discount()
 
-    def get_shipping_cost(self, request):
+    def get_shipping_cost(self):
         """
         Calculate the shipping cost based on conditions.
         """
-        price_currency = request.GET.get('price_currency', 'USD')  # Default to 'USD' if not provided
+        price_currency = self.request.GET.get('price_currency', 'USD')  # Default to 'USD' if not provided
         total_after_discount = self.get_total_after_discount()
 
         free_shipping_thresholds = {
@@ -127,9 +132,6 @@ class Cart:
         return Decimal(10)
 
     def get_total_with_shipping(self):
-        """
-        Return the total price including shipping costs.
-        """
         return self.get_total_after_discount() + self.get_shipping_cost()
 
     def apply_coupon(self, code):
@@ -138,24 +140,22 @@ class Cart:
         """
         try:
             coupon = Coupon.objects.get(code=code)
-
-            # Ստուգում ենք կուպոնի վավերությունը
             if coupon.is_valid():
                 self.coupon = coupon
-
-                # Հաշվում ենք զեղչը
                 self.discount = self.get_total_price() * (coupon.discount / 100)
+                self.session['coupon_code'] = coupon.code  # Պահպանում ենք session-ում
 
-                # Հաշվարկելուց հետո կուպոնը պետք է լինի մեկ անգամ օգտագործվող
-                if coupon.is_one_time_use:  # Գտնում ենք կուպոնի դաշտը
-                    coupon.is_used = True  # Կուպոնն արդեն օգտագործվել է
-                    coupon.save()  # Պահպանում ենք փոփոխությունը
+                if coupon.is_one_time_use:
+                    coupon.is_used = True
+                    coupon.save()
             else:
                 self.discount = Decimal(0)
+                self.session.pop('coupon_code', None)  # Հեռացնում ենք կուպոնը
         except Coupon.DoesNotExist:
             self.discount = Decimal(0)
+            self.session.pop('coupon_code', None)
 
-        self.save()  # Պահպանում ենք զեղչը և կուպոնն
+        self.save()
 
     def remove_coupon(self):
         """
@@ -172,8 +172,6 @@ class Cart:
         return len(self.cart) == 0
 
     def get_items(self):
-        """
-        Get a list of all the items in the cart.
-        """
-        return [(item['product'], item['quantity'], item['total_price']) for item in self.cart.values()]
+        return [(item.get('product'), item['quantity'], item['total_price']) for item in self]
+
 

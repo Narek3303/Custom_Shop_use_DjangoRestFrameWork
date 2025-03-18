@@ -137,14 +137,11 @@ class CartAddAPIView(APIView):
         size_id = serializer.validated_data.get('size_id', None)
         quantity = serializer.validated_data.get('quantity', 1)
         override = serializer.validated_data.get('override', False)
+        price = serializer.validated_data.get('price')
+        final_price = serializer.validated_data.get('final_price', None)
 
-        # Ստանում ենք փոխարժեքը middleware-ից
-        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
 
-        # Ստանում ենք գինը `size_id`-ի հիման վրա
-        price, final_price = self.get_product_price(product, size_id, conversion_rate)
 
-        # Ավելացնում ենք զամբյուղում
         cart.add(
             product=product,
             color=color_slug,
@@ -157,22 +154,7 @@ class CartAddAPIView(APIView):
 
         return Response({"message": "Product added to cart successfully"}, status=status.HTTP_201_CREATED)
 
-    def get_product_price(self, product, size_id, conversion_rate):
-        """
-        Հաշվում է գինը և զեղչված գինը ըստ `size_id`-ի։
-        """
-        if size_id:
-            size_price = product.size_prices.filter(size__id=size_id).first()
-            if size_price:
-                price = size_price.price * conversion_rate
-                final_price = price - (price * product.discount_percentage / 100)
-                return price, final_price
 
-        # Եթե `size_id` չկա, օգտագործում ենք հիմնական գինը
-        price = product.price * conversion_rate
-        final_price = product.get_final_price() * conversion_rate if product.get_final_price() else None
-
-        return price, final_price
 
 
 class UserTokenCheckView(APIView):

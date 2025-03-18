@@ -172,19 +172,13 @@ class ProductListFilterPostSerializer(serializers.Serializer):
     )
     discounted = serializers.BooleanField(default=False)
 
-    price_currency = serializers.ChoiceField(
-        choices=["USD", "AMD", "RUB"],  # ✅ Ընդունում ենք միայն նշված արժույթները
-        required=False
-    )
-
-
 
 class SizePriceSerializer(serializers.ModelSerializer):
     size = SizeSerializer()  # Վերադարձնում ենք չափսի տվյալները
 
     class Meta:
         model = SizePrice
-        fields = ['size', 'price', ]
+        fields = ['size', 'price']
 
 
 
@@ -315,3 +309,5 @@ class CartAddPostSerializer(serializers.Serializer):
     size = serializers.CharField(required=True, max_length=4)
     quantity = serializers.IntegerField()
     override = serializers.BooleanField(default=False)
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    final_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)

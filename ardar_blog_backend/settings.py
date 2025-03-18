@@ -98,7 +98,6 @@ INSTALLED_APPS = [
 INSTALLED_APPS += [
     'exchange',
     'django_celery_beat',
-    'djmoney',
 ]
 
 
