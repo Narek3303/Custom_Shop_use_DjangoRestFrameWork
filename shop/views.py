@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from decimal import Decimal
-from cart.cart import Cart
+
 
 from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color, DiscountedShowModel, Wishlist, \
                         Review, Currency
@@ -18,7 +18,7 @@ from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, 
 from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
     UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, \
     ProductFilterSerializer, ProductListFilterSerializer, ProductListFilterPostSerializer, ChatGPTPost, CategoryArajarkvoxSerializer, \
-    DiscountedShowSerializer, ReviewSerializer, CartAddPostSerializer
+    DiscountedShowSerializer, ReviewSerializer
 
 
 from rest_framework import generics, permissions
@@ -67,7 +67,7 @@ class ProductListView(APIView):
             subcategory = get_object_or_404(SubCategory, slug=subcategory_slug, category=category)
             products = products.filter(category=subcategory)
 
-        # Wishlist-ի ստուգում
+
         serialized_products = ProductListSerializer(products, many=True, context={'request': request}).data
 
 
@@ -90,7 +90,7 @@ class ProductDetailView(APIView):
             Product, id=product_id, slug=slug, available=True, status=Product.Status.PUBLISHED
         )
 
-        # Ստանում ենք փոխարժեքը middleware-ից
+
         conversion_rate = getattr(request, 'conversion_rate', 1.0)
 
         # Գտնում ենք նմանատիպ ապրանքները ըստ tag-երի
@@ -116,43 +116,46 @@ class ProductDetailView(APIView):
 
 
 
-class CartAddAPIView(APIView):
-    """
-    Add a product to the cart.
-    """
-    serializer_class = CartAddPostSerializer
-    permission_classes = [permissions.IsAuthenticated]
+# class CartAddAPIView(APIView):
+#     permission_classes = [permissions.IsAuthenticated]
+#
+#     def post(self, request, product_id):
+#         cart = Cart(request)
+#         product = get_object_or_404(Product, id=product_id, available=True, status=Product.Status.PUBLISHED)
+#         cart_items = [item for item in cart]
+#         product_ids = [item["product_id"] for item in cart_items]
+#
+#         product_ids.append(product_id)
+#
+#
+#
+#         serializer = CartAddPostSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         # product_serializer = ProductSummarySerializer(product)
+#
+#
+#         colors = serializer.validated_data['colors']
+#         size = serializer.validated_data['size']
+#         quantity = serializer.validated_data['quantity']
+#         override = serializer.validated_data['override']
+#         price = str(serializer.validated_data['price'])  # Decimal → str
+#         final_price = str(serializer.validated_data.get('final_price', None))  # Decimal → str
+#
+#
+#         cart.add(
+#             product=product,
+#             colors=colors,
+#             size=size,
+#             quantity=quantity,
+#             override=override,
+#             price=price,
+#             final_price=final_price
+#         )
+#
+#         return Response(product_ids, status=status.HTTP_201_CREATED)
 
-    def post(self, request, product_id):
-        cart = Cart(request)
-
-        # Ստանում ենք ապրանքը
-        product = get_object_or_404(Product, id=product_id, available=True, status=Product.Status.PUBLISHED)
-
-        # Ստուգում ենք փոխանցված տվյալները
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        color_slug = serializer.validated_data.get('color', None)
-        size_id = serializer.validated_data.get('size_id', None)
-        quantity = serializer.validated_data.get('quantity', 1)
-        override = serializer.validated_data.get('override', False)
-        price = serializer.validated_data.get('price')
-        final_price = serializer.validated_data.get('final_price', None)
 
 
-
-        cart.add(
-            product=product,
-            color=color_slug,
-            size_id=size_id,
-            quantity=quantity,
-            override=override,
-            price=price,
-            final_price=final_price
-        )
-
-        return Response({"message": "Product added to cart successfully"}, status=status.HTTP_201_CREATED)
 
 
 

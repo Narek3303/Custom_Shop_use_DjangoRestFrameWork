@@ -1,24 +1,79 @@
+
+
+
+# class CartAddPostSerializer(serializers.Serializer):
+#     colors = serializers.CharField(max_length=20, required=True)
+#     size = serializers.CharField(required=True, max_length=4)
+#     quantity = serializers.IntegerField(min_value=1)
+#     override = serializers.BooleanField(default=False)
+#     price = serializers.DecimalField(max_digits=10, decimal_places=2)
+#     final_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+
+
+
 from rest_framework import serializers
+from .models import Cart, CartItem
+from shop.models import Product
+from shop.models import Size, Color
 from decimal import Decimal
 
-class CartItemSerializer(serializers.Serializer):
-    product_id = serializers.IntegerField()
-    product_name = serializers.CharField()
-    quantity = serializers.IntegerField()
-    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+class CartItemSerializer(serializers.ModelSerializer):
+    price = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
 
+    class Meta:
+        model = CartItem
+        fields = ['product', 'size', 'color', 'quantity', 'price', 'total_price']
 
-class CartSerializer(serializers.Serializer):
-    items = CartItemSerializer(many=True)
-    # total_price = serializers.SerializerMethodField()
-    # total_items = serializers.SerializerMethodField()
-    # discount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, default=Decimal(0))
-    # shipping_cost = serializers.SerializerMethodField()
-    # total_with_shipping = serializers.SerializerMethodField()
+    def create(self, validated_data):
+        product = validated_data['product']
+        size = validated_data.get('size', None)
+        color = validated_data.get('color', None)
+        quantity = validated_data['quantity']
+        price = validated_data['price']
+
+        # Հաշվարկում ենք `total_price`
+        total_price = price * quantity
+
+        # Ստեղծում ենք `CartItem`
+        cart_item = CartItem.objects.create(
+            product=product,
+            size=size,
+            color=color,
+            quantity=quantity,
+            price=price,
+            total_price=total_price
+        )
+        cart_item.save()
+        return cart_item
+
+    def get_price(self, obj):
+        request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
+        return obj.price * conversion_rate  # Փոխակերպված գինը
+
+    def get_total_price(self, obj):
+        request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
+        return obj.total_price * conversion_rate  # Փոխակերպված ընդհանուր գինը
 
 
 
 
 
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    item_count = serializers.IntegerField(read_only=True)
 
+    class Meta:
+        model = Cart
+        fields = ['id', 'user', 'status', 'total_price', 'item_count', 'items']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
+
+        data['total_price'] = Decimal(data['total_price']) * conversion_rate
+        return data

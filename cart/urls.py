@@ -1,20 +1,13 @@
 from django.urls import path
 from . import views
 
+app_name = 'cart'
+
 urlpatterns = [
-    # Զամբյուղի մանրամասների ստացում
-    path('cart/', views.CartDetailAPIView.as_view(), name='cart-detail'),
-
-
-    # Ապրանքի հեռացում զամբյուղից
-    path('cart/remove/<int:product_id>/', views.CartRemoveAPIView.as_view(), name='cart-remove'),
-
-    # Զամբյուղի մաքրում
-    path('cart/clear/', views.CartClearAPIView.as_view(), name='cart-clear'),
-
-    # Ապրանքի քանակի թարմացում
-    path('cart/update/<int:product_id>/', views.CartUpdateAPIView.as_view(), name='cart-update'),
-
-    # Զամբյուղի ընդհանուր գնի ստացում
-    path('cart/total_price/', views.CartTotalPriceAPIView.as_view(), name='cart-total-price'),
-    ]
+    path('', views.CartListView.as_view(), name='cart-list'),
+    path('add/', views.AddToCartView.as_view(), name='add-to-cart'),
+    path('remove/', views.RemoveFromCartView.as_view(), name='remove-from-cart'),
+    path('update/<int:cart_item_id>/', views.UpdateCartItemQuantityView.as_view(), name='update-cart-item'),
+    path('clear/', views.ClearCartView.as_view(), name='clear-cart'),
+    path('close/', views.CloseCartView.as_view(), name='close-cart'),
+]

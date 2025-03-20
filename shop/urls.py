@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from .views import ProductListView, ProductFilterListView, ToggleWishlistView, WishlistProductsView, \
-                    ReviewView, AdminReviewModeration, ProductPriceView, convert_price, CartAddAPIView, \
+                    ReviewView, AdminReviewModeration, ProductPriceView, convert_price, \
                     SetCurrencyAPIView, GetAvailableCurrenciesAPIView
 
 
@@ -26,7 +26,6 @@ urlpatterns = [
     path('product-detail/<slug:slug>/<int:product_id>/', views.ProductDetailView.as_view(), name='product_detail'),
     path('api/accounts/user_token_check/', views.UserTokenCheckView.as_view()),
     path('convert_price/<int:product_id>/<str:currency_code>/', convert_price, name='convert_price'),
-    path('cart/add/<int:product_id>/', CartAddAPIView.as_view(), name='cart-add'),
     path('api/set-currency/', SetCurrencyAPIView.as_view(), name='set_currency'),
     path('api/available-currencies/', GetAvailableCurrenciesAPIView.as_view(), name='available_currencies'),
 

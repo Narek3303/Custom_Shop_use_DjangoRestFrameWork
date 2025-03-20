@@ -304,10 +304,13 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 
-class CartAddPostSerializer(serializers.Serializer):
-    colors = serializers.CharField(max_length=20, required=True)
-    size = serializers.CharField(required=True, max_length=4)
-    quantity = serializers.IntegerField()
-    override = serializers.BooleanField(default=False)
-    price = serializers.DecimalField(max_digits=10, decimal_places=2)
-    final_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+
+
+
+
+class ProductSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ['id', 'name']
+
+

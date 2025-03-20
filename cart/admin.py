@@ -1,47 +1,40 @@
 from django.contrib import admin
 from .models import Cart, CartItem
-from django.utils.safestring import mark_safe
-
+from shop.models import Product
 
 class CartItemInline(admin.TabularInline):
-    """Inline for adding CartItems within the Cart admin page."""
     model = CartItem
-    extra = 1  # Default number of extra forms to display
-
+    extra = 1  # Number of empty cart items to show by default in the inline form
 
 class CartAdmin(admin.ModelAdmin):
-    """Admin interface for Cart model."""
-    list_display = ['id', 'user', 'created_at', 'updated_at', 'total_price', 'total_items']
-    list_filter = ['created_at', 'updated_at', 'user']
-    search_fields = ['user__username', 'user__email']
+    list_display = ('user', 'status', 'created_at', 'updated_at', 'total_price', 'item_count')
+    search_fields = ('user__username',)
+    list_filter = ('status',)
     inlines = [CartItemInline]
 
-    def total_price(self, obj):
-        """Calculated field to show the total price of the cart."""
-        return obj.total_price
+    def item_count(self, obj):
+        return obj.item_count
+    item_count.admin_order_field = 'item_count'  # Allow sorting by item_count
 
-    total_price.short_description = 'Total Price'
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
 
-    def total_items(self, obj):
-        """Calculated field to show the total number of items in the cart."""
-        return obj.total_items
+    def mark_as_closed(self, request, queryset):
+        queryset.update(status='closed')
+    mark_as_closed.short_description = "Change status to closed"
 
-    total_items.short_description = 'Total Items'
+    def clear_cart(self, request, queryset):
+        for cart in queryset:
+            cart.clear_cart()
+    clear_cart.short_description = "Clear all items in selected carts"
 
+    actions = ['mark_as_closed', 'clear_cart']
+
+admin.site.register(Cart, CartAdmin)
 
 class CartItemAdmin(admin.ModelAdmin):
-    """Admin interface for CartItem model."""
-    list_display = ['cart', 'product', 'quantity', 'price', 'total_price']
-    list_filter = ['cart', 'product']
-    search_fields = ['product__name', 'cart__user__username']
+    list_display = ('product', 'quantity', 'price', 'total_price', 'cart')
+    search_fields = ('product__name', 'cart__user__username')
+    list_filter = ('cart__status',)
 
-    def total_price(self, obj):
-        """Calculated field to show the total price of the cart item."""
-        return obj.total_price
-
-    total_price.short_description = 'Total Price'
-
-
-# Register the models with their corresponding admin configurations
-admin.site.register(Cart, CartAdmin)
 admin.site.register(CartItem, CartItemAdmin)

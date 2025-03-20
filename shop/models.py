@@ -13,7 +13,7 @@ from django.core.mail import send_mail
 from rest_framework import serializers, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from djmoney.models.fields import MoneyField
+
 
 
 
