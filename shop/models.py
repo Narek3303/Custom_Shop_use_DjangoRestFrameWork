@@ -99,8 +99,9 @@ class Product(models.Model):
     colors = models.ManyToManyField('Color', related_name="products")
     description = models.TextField('Product Description', blank=True)
     delivery_service = models.TextField('Delivery Service', blank=True, null=True)
-    price = models.DecimalField('Price (USD)', max_digits=10, decimal_places=2)
+    price = models.DecimalField('Price (AMD)', max_digits=10, decimal_places=2)
     discount_percentage = models.DecimalField('Discount Percentage', max_digits=10, decimal_places=2, default=0, null=True)
+    related_products = models.ManyToManyField("self", blank=True, symmetrical=False)
     available = models.BooleanField(default=True)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
@@ -112,7 +113,7 @@ class Product(models.Model):
     tags = TaggableManager(verbose_name='Tags')
     objects = models.Manager()  # Default manager
     published = PublishedManager()  # Custom manager for published products
-    article = models.CharField(max_length=20, blank=True)
+    article = models.CharField(max_length=20, unique=True, blank=True)
     composition = models.CharField(max_length=255, blank=True)
     gender = models.CharField(max_length=10,  blank=True,
                               choices=[('Мужской', 'Мужской'), ('Женский', 'Женский'), ('Унисекс', 'Унисекс')])
@@ -147,14 +148,25 @@ class Product(models.Model):
         currency = Currency.objects.filter(code="")
 
 
+    def get_same_product_different(self):
+        return self.related_products.exclude(id=self.id)
 
 
+    def get_first_image(self):
+        first_image = self.image.first()
+        return first_image.image.url if first_image else None
 
 
     def save(self, *args, **kwargs):
+        if not self.article:
+            self.article = generate_unique_article()
+
         if not self.slug:
             self.slug = f'{slugify(self.name)}-{uuid.uuid4()}'
         super().save(*args, **kwargs)
+
+def generate_unique_article(self):
+    return str(uuid.uuid4().hex[:10]).upper()
 
 class Image(models.Model):
     image = models.ImageField('Image', upload_to='products/%Y/%m/%d', blank=True)

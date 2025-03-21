@@ -21,6 +21,10 @@ class CartItemSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
 
+
+
+
+
     class Meta:
         model = CartItem
         fields = ['product', 'size', 'color', 'quantity', 'price', 'total_price']
@@ -56,6 +60,11 @@ class CartItemSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
         return obj.total_price * conversion_rate  # Փոխակերպված ընդհանուր գինը
+
+
+
+
+
 
 
 

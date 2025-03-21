@@ -204,6 +204,11 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Չի փակվի browser-ը փակել
 
 
 
+REDIS_HOST = 'localhost'
+REDIS_PORT = 6379
+REDIS_DB = 0
+
+
 ROOT_URLCONF = 'ardar_blog_backend.urls'
 
 TEMPLATES = [

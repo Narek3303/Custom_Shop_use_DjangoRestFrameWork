@@ -41,9 +41,10 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ('category', 'brand', 'status', 'available')
     search_fields = ('name', 'description', 'tags__name')  # Allows searching by tags as well
     prepopulated_fields = {'slug': ('name',)}  # Auto-generate the slug from product name
-    filter_horizontal = ('image', 'size', 'colors')  # ManyToMany fields displayed as a filter
+    filter_horizontal = ('image', 'size', 'colors', 'related_products')  # ManyToMany fields displayed as a filter
     list_editable = ('available', 'status')  # Inline editing available/ status
-    ordering = ('-created',)  # Ordering the products by creation date descending
+    ordering = ('-created',)
+    readonly_fields = ('article',)# Ordering the products by creation date descending
 
     # Show final price calculation in list display
     def get_final_price_display(self, obj):

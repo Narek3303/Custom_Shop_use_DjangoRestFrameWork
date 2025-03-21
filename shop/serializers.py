@@ -98,6 +98,7 @@ class BrandSerializer(serializers.ModelSerializer):
 
 
 
+
 class ProductListSerializer(serializers.ModelSerializer):
     image = ImageSerializer(many=True)
     colors = ColorSerializer(many=True)
@@ -108,10 +109,11 @@ class ProductListSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
 
 
+
     class Meta:
         model = Product
         fields = [
-            'id', 'name', 'image', 'price', 'final_price',
+            'id', 'name', 'slug', 'image', 'price', 'final_price',
             'colors', 'brand', 'size', 'liked',
         ]
 
@@ -181,6 +183,20 @@ class SizePriceSerializer(serializers.ModelSerializer):
         fields = ['size', 'price']
 
 
+class RelatedProductSerializer(serializers.ModelSerializer):
+    first_image = serializers.SerializerMethodField()
+
+
+    class Meta:
+        model = Product
+        fields = ['id', 'slug', 'first_image']
+
+
+    def get_first_image(self, obj):
+        return obj.get_first_image()
+
+
+
 
 class ProductDetailSerializer(serializers.ModelSerializer):
     image = ImageSerializer(many=True)
@@ -192,6 +208,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     final_price = serializers.SerializerMethodField()
     liked = serializers.SerializerMethodField()
+    related_products = RelatedProductSerializer(many=True, read_only=True)
 
 
 
@@ -199,8 +216,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'image', 'price', 'final_price', 'colors', 'size', 'brand', 'description', 'delivery_service',
-                  'tags', 'liked', 'size_prices']
+        fields = ['id', 'name', 'slug', 'image', 'price', 'final_price', 'colors', 'size', 'brand', 'description', 'delivery_service',
+                  'tags', 'liked', 'size_prices', 'related_products', 'article', 'gender', 'composition', 'created', 'updated', ]
 
 
     def get_tags(self, obj):
@@ -312,5 +329,13 @@ class ProductSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name']
+
+
+
+
+
+
+
+
 
 

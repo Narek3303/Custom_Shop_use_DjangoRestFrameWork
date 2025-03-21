@@ -20,8 +20,10 @@ class CartListView(APIView):
     def get(self, request, *args, **kwargs):
         cart = get_or_create_cart(request.user)
         conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
+        price_currency = getattr(request, 'currency_code')
+
         serializer = CartSerializer(cart, context={'request': request, 'conversion_rate': conversion_rate})
-        return Response(serializer.data)
+        return Response(serializer.data, price_currency)
 
 class AddToCartView(APIView):
     permission_classes = [IsAuthenticated]
@@ -59,7 +61,29 @@ class AddToCartView(APIView):
 
         cart.update_total_price()
 
-        return Response(CartItemSerializer(cart_item).data, status=status.HTTP_201_CREATED)
+        product_info = [
+            {
+                'id': item.product.id,
+                'name': item.product.name,
+                'quantity': item.quantity,
+                'size': item.size.name if item.size else None,
+
+            }
+            for item in cart.items.all()
+        ]
+
+
+
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
+
+        serializer = CartSerializer(cart, context={'request': request, 'conversion_rate': conversion_rate})
+
+
+
+        return Response(
+            # 'cart': serializer.data,
+            product_info  # Ավելացրեք պրոդուկտի ID-ները որպես լրացուցիչ դաշտ
+        )
 
 
 class RemoveFromCartView(APIView):

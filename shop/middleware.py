@@ -20,9 +20,9 @@ class CurrencyMiddleware(MiddlewareMixin):
         if not price_currency and request.user.is_authenticated:
             price_currency = cache.get(f"user_currency_{request.user.id}")
 
-        # Եթե դեռ չկա, օգտագործում ենք 'USD' որպես default
+        # Եթե դեռ չկա, օգտագործում ենք 'AMD' որպես default
         if not price_currency:
-            price_currency = 'USD'
+            price_currency = 'AMD'
 
         # Պահում ենք request-ում
         request.currency_code = price_currency

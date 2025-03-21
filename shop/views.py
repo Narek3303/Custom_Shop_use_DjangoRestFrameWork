@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from decimal import Decimal
+from .recommender import Recommender
 
 
 from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color, DiscountedShowModel, Wishlist, \
@@ -92,6 +93,7 @@ class ProductDetailView(APIView):
 
 
         conversion_rate = getattr(request, 'conversion_rate', 1.0)
+        price_currency = getattr(request, 'currency_code')
 
         # Գտնում ենք նմանատիպ ապրանքները ըստ tag-երի
         similar_products = Product.objects.filter(
@@ -107,9 +109,10 @@ class ProductDetailView(APIView):
             'product': ProductDetailSerializer(
                 product, context={'request': request}
             ).data,
-            'similar_products': ProductDetailSerializer(
-                similar_products, many=True, context={'request': request}
-            ).data,
+            # 'similar_products': ProductDetailSerializer(
+            #     similar_products, many=True, context={'request': request}
+            # ).data,
+            'price_currency': price_currency
         }, status=status.HTTP_200_OK)
 
 
@@ -299,6 +302,8 @@ class ProductFilterListView(APIView):
 
         # Ստանում ենք փոխարժեքը middleware-ից
         conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
+        price_currency = getattr(request, 'currency_code')
+
 
         # Ավելացնում ենք ֆինալ գինը
         products = products.annotate(
@@ -332,15 +337,32 @@ class ProductFilterListView(APIView):
         if price_filter:
             products = products.filter(**price_filter)
 
-        # Սերիալիզացնում ենք արդյունքը
+        # 🔥 Ավելացնում ենք առաջարկվող ապրանքներ՝ Recommender-ի միջոցով
+        recommender = Recommender()
+        recommended_products = recommender.suggest_products_for(products[:5])  # Ընտրում ենք առաջին 5-ը ֆիլտրվածներից
+
+        # Սերիալիզացնում ենք արդյունքները
         serialized_products = ProductListSerializer(
             products,
             many=True,
             context={'request': request}
         ).data
 
-        return Response({"products": serialized_products}, status=status.HTTP_200_OK)
+        serialized_recommended_products = ProductListSerializer(
+            recommended_products,
+            many=True,
+            context={'request': request}
+        ).data
 
+        return Response(
+            {
+                "products": serialized_products,
+                "recommended_products": serialized_recommended_products, # ✅ Ավելացվել է
+                "price_currency": price_currency,
+
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 # class ChatGPTView(APIView):
@@ -477,5 +499,7 @@ class GetAvailableCurrenciesAPIView(APIView):
     def get(self, request):
         currencies = Currency.objects.all().values("code", "exchange_rate")
         return Response({"currencies": list(currencies)}, status=status.HTTP_200_OK)
+
+
 
 
