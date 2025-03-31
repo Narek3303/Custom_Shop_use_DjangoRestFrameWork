@@ -23,7 +23,7 @@ class CartListView(APIView):
         price_currency = getattr(request, 'currency_code')
 
         serializer = CartSerializer(cart, context={'request': request, 'conversion_rate': conversion_rate})
-        return Response(serializer.data, price_currency)
+        return Response(serializer.data)
 
 class AddToCartView(APIView):
     permission_classes = [IsAuthenticated]
@@ -125,17 +125,35 @@ class RemoveFromCartView(APIView):
         serializer = CartSerializer(cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class UpdateCartItemQuantityView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, cart_item_id, *args, **kwargs):
-        cart_item = CartItem.objects.get(id=cart_item_id)
-        quantity = request.data.get('quantity')
-        cart_item.update_quantity(quantity)  # Using the update_quantity method from your CartItem model
-        cart_item.cart.refresh_from_db()  # Refresh to get updated total_price
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        product_id = request.data.get("product_id")
+        size_id = request.data.get("size_id")
+        quantity = request.data.get("quantity")
+
+        if not product_id or not size_id:
+            return Response(
+                {"error": "Both product_id and size_id are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Փնտրում ենք CartItem-ը `product_id`-ով և `size_id`-ով
+        cart_item = get_object_or_404(CartItem, cart__user=user, product_id=product_id, size_id=size_id)
+
+        # Թարմացնում ենք `quantity`
+        if quantity is not None:
+            cart_item.update_quantity(quantity)  # Օգտագործում ենք CartItem-ի մեթոդը
+            cart_item.save()
+
+        # Թարմացնում ենք զամբյուղը
+        cart_item.cart.refresh_from_db()
         cart_item.cart.save()
-        cart = cart_item.cart
-        serializer = CartSerializer(cart)
+
+        serializer = CartSerializer(cart_item.cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ClearCartView(APIView):

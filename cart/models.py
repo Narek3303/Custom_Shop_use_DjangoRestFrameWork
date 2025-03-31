@@ -123,6 +123,12 @@ class CartItem(models.Model):
         self.save()
 
 
+    def get_product_image(self):
+        """Վերադարձնում է ապրանքի առաջին նկարը, եթե կա"""
+        first_image = self.product.image.first()  # ստանում ենք առաջին նկարը
+        return first_image.image.url if first_image else None  # վերադարձնում ենք URL-ը, եթե նկար կա
+
+
 
 
 

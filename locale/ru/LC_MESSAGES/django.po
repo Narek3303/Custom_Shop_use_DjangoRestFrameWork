@@ -1,0 +1,278 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-03-30 16:46+0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || "
+"(n%100>=11 && n%100<=14)? 2 : 3);\n"
+#: ardar_blog_backend/settings.py:410
+msgid "English"
+msgstr ""
+
+#: ardar_blog_backend/settings.py:411
+msgid "Armenian"
+msgstr ""
+
+#: ardar_blog_backend/settings.py:412
+msgid "Russian"
+msgstr ""
+
+#: orders/admin.py:49 orders/models.py:141
+msgid "Subtotal cannot be negative."
+msgstr ""
+
+#: orders/admin.py:51 orders/models.py:143
+msgid "Discount cannot be negative."
+msgstr ""
+
+#: orders/admin.py:53 orders/models.py:145
+msgid "Tax cannot be negative."
+msgstr ""
+
+#: orders/admin.py:58
+msgid "Total amount cannot be negative."
+msgstr ""
+
+#: orders/admin.py:133
+msgid "Total Price"
+msgstr ""
+
+#: orders/admin.py:141
+msgid "Product Stock"
+msgstr ""
+
+#: orders/admin.py:149
+msgid "Quantity must be greater than zero."
+msgstr ""
+
+#: orders/admin.py:151
+msgid "Price cannot be negative."
+msgstr ""
+
+#: orders/admin.py:156
+msgid ""
+"Price does not match the current product price. Please update the product's "
+"price."
+msgstr ""
+
+#: orders/admin.py:160
+msgid "Insufficient stock for the requested quantity."
+msgstr ""
+
+#: orders/admin.py:177
+msgid "Cannot modify items from shipped or delivered orders."
+msgstr ""
+
+#: orders/admin.py:182
+msgid "Cannot update the item due to insufficient stock."
+msgstr ""
+
+#: orders/admin.py:192 orders/admin.py:202
+msgid "Cannot delete items from shipped or delivered orders."
+msgstr ""
+
+#: orders/models.py:14
+msgid "Pending"
+msgstr ""
+
+#: orders/models.py:15 orders/models.py:79
+msgid "Processing"
+msgstr ""
+
+#: orders/models.py:16 orders/models.py:80
+msgid "Shipped"
+msgstr ""
+
+#: orders/models.py:17 orders/models.py:82
+msgid "Delivered"
+msgstr ""
+
+#: orders/models.py:18
+msgid "Canceled"
+msgstr ""
+
+#: orders/models.py:60 orders/models.py:275
+msgid "Shipping Method"
+msgstr ""
+
+#: orders/models.py:63
+msgid "Shipping Cost"
+msgstr ""
+
+#: orders/models.py:70
+msgid "Tracking Number"
+msgstr ""
+
+#: orders/models.py:76
+msgid "Shipping Status"
+msgstr ""
+
+#: orders/models.py:81
+msgid "In Transit"
+msgstr ""
+
+#: orders/models.py:83
+msgid "Cancelled"
+msgstr ""
+
+#: orders/models.py:88
+msgid "Shipped at"
+msgstr ""
+
+#: orders/models.py:93
+msgid "Delivered at"
+msgstr ""
+
+#: orders/models.py:147
+msgid "Email address is required."
+msgstr ""
+
+#: orders/models.py:149
+msgid "Shipping address is required."
+msgstr ""
+
+#: orders/models.py:157 orders/models.py:208 orders/models.py:288
+msgid "Order"
+msgstr ""
+
+#: orders/models.py:162
+msgid "Product"
+msgstr ""
+
+#: orders/models.py:165
+msgid "Quantity"
+msgstr ""
+
+#: orders/models.py:170 orders/models.py:257
+msgid "Price"
+msgstr ""
+
+#: orders/models.py:175
+msgid "Weight (kg)"
+msgstr ""
+
+#: orders/models.py:182
+msgid "Order Item"
+msgstr ""
+
+#: orders/models.py:183
+msgid "Order Items"
+msgstr ""
+
+#: orders/models.py:211
+msgid "Status"
+msgstr ""
+
+#: orders/models.py:218
+msgid "Changed By"
+msgstr ""
+
+#: orders/models.py:221
+msgid "Changed At"
+msgstr ""
+
+#: orders/models.py:225
+msgid "Notes"
+msgstr ""
+
+#: orders/models.py:231
+msgid "Order Status History"
+msgstr ""
+
+#: orders/models.py:232
+msgid "Order Status Histories"
+msgstr ""
+
+#: orders/models.py:242
+msgid "Name"
+msgstr ""
+
+#: orders/models.py:246
+msgid "Carrier"
+msgstr ""
+
+#: orders/models.py:252
+msgid "Local Delivery"
+msgstr ""
+
+#: orders/models.py:253
+msgid "Store Pickup"
+msgstr ""
+
+#: orders/models.py:262
+msgid "Estimated Delivery"
+msgstr ""
+
+#: orders/models.py:266
+msgid "Is Active"
+msgstr ""
+
+#: orders/models.py:270
+msgid "Description"
+msgstr ""
+
+#: orders/models.py:276
+msgid "Shipping Methods"
+msgstr ""
+
+#: orders/models.py:291
+msgid "Country"
+msgstr ""
+
+#: orders/models.py:295
+msgid "City"
+msgstr ""
+
+#: orders/models.py:299
+msgid "Address Line 1"
+msgstr ""
+
+#: orders/models.py:303
+msgid "Address Line 2"
+msgstr ""
+
+#: orders/models.py:309
+msgid "Postal Code"
+msgstr ""
+
+#: orders/models.py:313
+msgid "Phone"
+msgstr ""
+
+#: orders/models.py:317
+msgid "Delivery Notes"
+msgstr ""
+
+#: orders/models.py:323
+msgid "Shipping Address"
+msgstr ""
+
+#: orders/models.py:324
+msgid "Shipping Addresses"
+msgstr ""
+
+#: users/forms.py:14
+msgid "gaxtnabar"
+msgstr ""
+
+#: users/forms.py:16
+msgid "gaxtnabari verifikacum"
+msgstr ""
+
+#: users/forms.py:18
+msgid "Enter the same password as above, for verification."
+msgstr ""

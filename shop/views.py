@@ -1,6 +1,6 @@
 
 from django.core.cache import cache
-from django.core.exceptions import FieldError
+from django.core.exceptions import FieldError, PermissionDenied
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.db.models import Count
@@ -11,19 +11,20 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from decimal import Decimal
 from .recommender import Recommender
+# from .hybrid_recommender import hybrid_recommendation
 
 
 from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color, DiscountedShowModel, Wishlist, \
-                        Review, Currency
+                        Review, Currency, SizePrice
 
 from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
     UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, \
     ProductFilterSerializer, ProductListFilterSerializer, ProductListFilterPostSerializer, ChatGPTPost, CategoryArajarkvoxSerializer, \
-    DiscountedShowSerializer, ReviewSerializer
+    DiscountedShowSerializer, ReviewSerializer, ReviewRatingSerializer
 
 
 from rest_framework import generics, permissions
-from .models import Wishlist
+# from .models import Wishlist
 from .serializers import WishlistSerializer
 import io
 from rest_framework.parsers import JSONParser
@@ -44,6 +45,7 @@ class CategoryView(APIView):
             "discount_char_vi": serialized_discount_char,
             "data": serializer.data
         }, status=status.HTTP_200_OK)
+
 
 
 
@@ -338,26 +340,38 @@ class ProductFilterListView(APIView):
             products = products.filter(**price_filter)
 
         # 🔥 Ավելացնում ենք առաջարկվող ապրանքներ՝ Recommender-ի միջոցով
-        recommender = Recommender()
-        recommended_products = recommender.suggest_products_for(products[:5])  # Ընտրում ենք առաջին 5-ը ֆիլտրվածներից
+        # recommender = Recommender()
+        # recommended_products = recommender.suggest_products_for(products[:5])  # Ընտրում ենք առաջին 5-ը ֆիլտրվածներից
+
+
+        # user_id = request.user.id  # Օգտատիրոջ ID-ն
+        # hybrid_recommended_products = hybrid_recommendation(user_id=user_id, product_id=products[0].id, top_n=5)
+
+
 
         # Սերիալիզացնում ենք արդյունքները
         serialized_products = ProductListSerializer(
             products,
             many=True,
             context={'request': request}
-        ).data
+        ).data,
 
-        serialized_recommended_products = ProductListSerializer(
-            recommended_products,
-            many=True,
-            context={'request': request}
-        ).data
+        # serialized_recommended_products = ProductListSerializer(
+        #     recommended_products,
+        #     many=True,
+        #     context={'request': request}
+        # ).data
+        # serialized_hybrid_recommended_products = ProductListSerializer(
+        #     hybrid_recommended_products,
+        #     many=True,
+        #     context={'request': request}
+        # ).data
 
         return Response(
             {
                 "products": serialized_products,
-                "recommended_products": serialized_recommended_products, # ✅ Ավելացվել է
+                # "recommended_products": serialized_recommended_products, # ✅ Ավելացվել է
+                # "hybrid_recommended_products": serialized_hybrid_recommended_products,  # ✅ Hybrid առաջարկները
                 "price_currency": price_currency,
 
             },
@@ -379,23 +393,59 @@ class ProductFilterListView(APIView):
 
 
 
+
+
 class ToggleWishlistView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, product_id):
-        product = Product.objects.get(id=product_id)
+    def post(self, request):
+        product_id = request.data.get('product_id')
+        size_id = request.data.get('size_id')
 
-        wishlist_item, created = Wishlist.objects.get_or_create(user=request.user, product=product)
+        if not product_id:
+            return Response(
+                {'error': 'Product ID is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
+        product = get_object_or_404(Product, id=product_id)
 
+        # Եթե ապրանքը ունի չափսեր և չափսը նշված չէ, վերադարձնում ենք հնարավոր չափսերը
+        if product.size.exists() and not size_id:
+            sizes = product.size.all()
+            return Response({
+                'status': 'size_required',
+                'sizes': SizeSerializer(sizes, many=True).data
+            }, status=status.HTTP_200_OK)
+
+        size = None
+        price = None
+        if size_id:
+            size = get_object_or_404(SizePrice, id=size_id, product=product)
+            price = size.price  # Ստանում ենք size_price-ի գինը
+
+        # Ստեղծում ենք wishlist-ը՝ հաշվի առնելով չափսը
+        wishlist_item, created = Wishlist.objects.get_or_create(
+            user=request.user,
+            product=product,
+            size=size
+        )
+
+        # Եթե արդեն կա, ապա հեռացնում ենք
         if not created:
             wishlist_item.delete()
             return Response({'message': 'Removed from wishlist',
                              "id": product_id,
+                             "size_id": size_id,
                              "liked": False}, status=status.HTTP_200_OK)
+
+        # Սկսում ենք գինը վերագրել wishlist տարրին
+        wishlist_item.price = price  # Գինը, որը կապում ենք size_price-ի գնին
+        wishlist_item.save()
 
         return Response({'message': 'Added to wishlist',
                          "id": product_id,
+                         "size_id": size_id,
                          "liked": True
                          }, status=status.HTTP_201_CREATED)
 
@@ -404,21 +454,37 @@ class WishlistProductsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        wishlist_product_ids = Wishlist.objects.filter(user=request.user).values_list('product_id', flat=True)
-        products = Product.objects.filter(id__in=wishlist_product_ids)
-        serializer = ProductListSerializer(products, many=True, context={'request': request})
+        # Ստանալ wishlist-ի ապրանքները, որոնք կապված են օգտատիրոջ հետ
+        wishlist_items = Wishlist.objects.filter(user=request.user)
+
+        # Սերիալիզատորով տվյալները ստանալ
+        serializer = WishlistSerializer(wishlist_items, many=True, context={'request': request})
+
+        # Վերադարձնել պատասխանը
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ReviewView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-    def get(self, request, product_id):
-        reviews = Review.objects.filter(product_id=product_id, status='AP')
-        serializer = ReviewSerializer(reviews, many=True)
+
+    def get_object(self, review_id, user):
+        review = get_object_or_404(Review, id=review_id)
+        if review.user != user:
+            raise PermissionDenied("Դուք չեք կարող փոփոխել կամ ջնջել այս review-ը")
+        return review
+
+    def get(self, request, product_id, review_id=None):
+        """Վերադարձնում է բոլոր review-ները կամ կոնկրետ review-ը"""
+        if review_id:
+            review = get_object_or_404(Review, id=review_id, product_id=product_id)
+            serializer = ReviewSerializer(review)
+        else:
+            reviews = Review.objects.filter(product=product_id, status='AP')
+            serializer = ReviewSerializer(reviews, many=True)
         return Response(serializer.data)
 
-    def post(self, request, product_id):
+    def post(self, request, product_id, review_id=None):
         data = request.data.copy()
         data['product'] = product_id
         serializer = ReviewSerializer(data=data, context={'request': request})
@@ -427,6 +493,49 @@ class ReviewView(APIView):
             review.send_notification()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def put(self, request, product_id, review_id):
+        """Թարմացնում է օգտագործողի սեփական review-ը"""
+        review = get_object_or_404(Review, id=review_id, product_id=product_id)
+
+        if review.user != request.user:
+            raise PermissionDenied("Դուք չեք կարող փոփոխել այս review-ը")
+
+        serializer = ReviewSerializer(review, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, product_id, review_id):
+        """Ջնջում է օգտագործողի սեփական review-ը"""
+        review = get_object_or_404(Review, id=review_id, product_id=product_id)
+
+        if review.user != request.user:
+            raise PermissionDenied("Դուք չեք կարող ջնջել այս review-ը")
+
+        review.delete()
+        return Response({"message": "Review deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+
+    def put(self, request, product_id):
+        review_id = Review.objects.filter(product=product_id, )
+        review = self.get_object(review_id, request.user)
+        serializer = ReviewSerializer(review, data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def delete(self, request, review_id):
+        review = self.get_object(review_id, request.user)
+        review.delete()
+        return Response({"message": "Review deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 
 class AdminReviewModeration(APIView):
@@ -503,3 +612,25 @@ class GetAvailableCurrenciesAPIView(APIView):
 
 
 
+
+
+class ProductHybridRecommendationView(APIView):
+    permission_classes = (AllowAny,)
+
+
+    def get(self, request, product_id, user_id):
+        recommended_products = hybrid_recommendation(user_id=user_id, product_id=product_id, top_n=5)
+
+
+        serialized_recommended_products = ProductListSerializer(
+            recommended_products,
+            many=True,
+            context={'request': request}
+        ).data
+
+        return Response(
+            {
+                "recommended_products": serialized_recommended_products,
+            },
+            status=status.HTTP_200_OK
+        )

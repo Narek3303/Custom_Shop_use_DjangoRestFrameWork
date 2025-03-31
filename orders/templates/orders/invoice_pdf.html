@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invoice {{ invoice.invoice_number }}</title>
+    <link rel="stylesheet" href="/static/css/pdf_styles.css">
+</head>
+<body>
+    <header class="invoice-header">
+        <div class="company-info">
+            {% if company.logo %}
+            <img src="{{ company.logo }}" alt="{{ company.name }}" class="company-logo">
+            {% endif %}
+            <h1>{{ company.name }}</h1>
+            <p>{{ company.address }}</p>
+            <p>Phone: {{ company.phone }} | Email: {{ company.email }}</p>
+            <p>Tax ID: {{ company.tax_id }}</p>
+        </div>
+
+        <div class="invoice-info">
+            <h2>INVOICE</h2>
+            <p><strong>Number:</strong> {{ invoice.invoice_number }}</p>
+            <p><strong>Date:</strong> {{ today }}</p>
+            <p><strong>Due Date:</strong> {{ due_date }}</p>
+            <p><strong>Order #:</strong> {{ order.order_number }}</p>
+        </div>
+    </header>
+
+    <div class="customer-info">
+        <h3>Bill To:</h3>
+        <p>{{ order.user.get_full_name }}</p>
+        <p>{{ order.shipping_address.address_line1 }}</p>
+        {% if order.shipping_address.address_line2 %}
+            <p>{{ order.shipping_address.address_line2 }}</p>
+        {% endif %}
+        <p>{{ order.shipping_address.city }}, {{ order.shipping_address.state }} {{ order.shipping_address.postal_code }}</p>
+        <p>{{ order.shipping_address.country }}</p>
+    </div>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Description</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ item.product.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>${{ item.price }}</td>
+                <td>${{ item.total_price }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <table>
+            <tr>
+                <td><strong>Subtotal:</strong></td>
+                <td>${{ order.subtotal }}</td>
+            </tr>
+            <tr>
+                <td><strong>Tax ({{ order.tax_rate }}%):</strong></td>
+                <td>${{ order.tax }}</td>
+            </tr>
+            <tr>
+                <td><strong>Shipping:</strong></td>
+                <td>${{ order.shipping_cost }}</td>
+            </tr>
+            <tr>
+                <td><strong>Discount:</strong></td>
+                <td>-${{ order.discount }}</td>
+            </tr>
+            <tr class="grand-total">
+                <td><strong>TOTAL:</strong></td>
+                <td>${{ order.total }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <footer class="invoice-footer">
+        <p>{{ company.name }} | {{ company.address }} | {{ company.phone }}</p>
+        <p>Thank you for your business!</p>
+    </footer>
+</body>
+</html>

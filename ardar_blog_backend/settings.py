@@ -15,6 +15,7 @@ import os
 from oauth2_provider import settings as oauth2_settings
 from dotenv import load_dotenv
 from celery.schedules import crontab
+from django.utils.translation import gettext_lazy as _
 
 
 
@@ -55,7 +56,6 @@ CELERY_BEAT_SCHEDULE = {
 # Application definition
 
 INSTALLED_APPS = [
-
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -85,8 +85,10 @@ INSTALLED_APPS = [
     'coupon.apps.CouponConfig',
     'users.apps.UsersConfig',
     'shop.apps.ShopConfig',
-    'orders.apps.OrdersConfig',
+    # 'orders.apps.OrdersConfig',
     'cart.apps.CartConfig',
+    'orders.apps.OrdersConfig',
+    'paypal.standard.ipn',
 
 ]
 
@@ -94,6 +96,10 @@ INSTALLED_APPS = [
 
 
 
+PAYPAL_RECEIVER_EMAIL = "your-paypal-email@example.com"
+
+STRIPE_TEST_PUBLIC_KEY = "your-public-key"
+STRIPE_TEST_SECRET_KEY = "your-secret-key"
 
 INSTALLED_APPS += [
     'exchange',
@@ -189,7 +195,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'shop.middleware.CurrencyMiddleware',
+
     # 'allauth.account.middleware.AccountMiddleware',
 
 
@@ -235,6 +243,12 @@ WSGI_APPLICATION = 'ardar_blog_backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+
+
+INSTALLED_APPS += ['graphene_django']
+GRAPHENE = {
+    "SCHEMA": "shop.schema.schema"
+}
 
 
 DATABASES = {
@@ -380,3 +394,38 @@ EMAIL_BCC = os.getenv("EMAIL_BCC")
 
 
 EXCHANGE_RATE_API_KEY = os.getenv("EXCHANGE_RATE_API_KEY")
+
+
+
+# PAYPAL_LIVE = True  # Production-ի համար (False՝ Sandbox-ի համար)
+# PAYPAL_RECEIVER_EMAIL = "your-paypal-email@example.com"
+# PAYPAL_CURRENCY = "USD"
+# PAYPAL_NOTIFY_URL = "https://yourdomain.com/paypal/ipn/"
+# PAYPAL_RETURN_URL = "https://yourdomain.com/payment/success/"
+# PAYPAL_CANCEL_URL = "https://yourdomain.com/payment/cancel/"
+
+
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('hy', _('Armenian')),
+    ('ru', _('Russian')),
+]
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
+
+USE_I18N = True
+
+
+# PDF Generation Settings
+COMPANY_NAME = "NSCompany"
+COMPANY_ADDRESS = "Armenia Ararat Norabac"
+COMPANY_PHONE = "+374 94876884 +374 94350200"
+COMPANY_EMAIL = "NSCompany@gmail.com"
+COMPANY_TAX_ID = "TAX-123456789"
+COMPANY_LOGO_URL = "/static/images/logo.png"  # Absolute URL preferred
+
+# WeasyPrint configuration
+WEASYPRINT_BASEURL = BASE_DIR  # For static files resolution

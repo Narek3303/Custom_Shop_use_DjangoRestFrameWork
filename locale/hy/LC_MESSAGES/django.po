@@ -1,0 +1,265 @@
+# ՈՐԵՎԷ ՆԿԱՐԱԳՐԱԿԱՆ ՎԵՐՆԱԳԻՐ:
+# Հեղինակային իրավունք (C) ՏԱՐԻ ՓԱԹԵԹԻ ՀԵՂԻՆԱԿԱՅԻՆ ՊԱՀԱՆՋՈՂԸ
+# Այս ֆայլը տարածվում է նույն արտոնագրով, ինչ փաթեթը:
+# ԱՌԱՋԻՆ ՀԵՂԻՆԱԿ <EMAIL@ADDRESS>, ՏԱՐԻ:
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: ՓԱԹԵԹԻ ՏԱՐԲԵՐԱԿ\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-03-30 16:46+0400\n"
+"PO-Revision-Date: ՏԱՐԻ-ԱՄԻՍ-ՕՐ ԺԱՄԱՆԱԿ+ԺԱՄԱՅԻՆ ԳՈՏԻ\n"
+"Last-Translator: ԼՐԱՑՐԵԼ ԱՆՈՒՆԸ <EMAIL@ADDRESS>\n"
+"Language-Team: ԼԵԶՈՒ <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ardar_blog_backend/settings.py:410
+msgid "English"
+msgstr "Անգլերեն"
+
+#: ardar_blog_backend/settings.py:411
+msgid "Armenian"
+msgstr "Հայերեն"
+
+#: ardar_blog_backend/settings.py:412
+msgid "Russian"
+msgstr "Ռուսերեն"
+
+#: orders/admin.py:49 orders/models.py:141
+msgid "Subtotal cannot be negative."
+msgstr "Ենթագումարը չի կարող լինել բացասական։"
+
+#: orders/admin.py:51 orders/models.py:143
+msgid "Discount cannot be negative."
+msgstr "Զեղչը չի կարող լինել բացասական։"
+
+#: orders/admin.py:53 orders/models.py:145
+msgid "Tax cannot be negative."
+msgstr "Հարկը չի կարող լինել բացասական։"
+
+#: orders/admin.py:58
+msgid "Total amount cannot be negative."
+msgstr "Ընդհանուր գումարը չի կարող լինել բացասական։"
+
+#: orders/admin.py:133
+msgid "Total Price"
+msgstr "Ընդհանուր գին"
+
+#: orders/admin.py:141
+msgid "Product Stock"
+msgstr "Ապրանքի պահեստ"
+
+#: orders/admin.py:149
+msgid "Quantity must be greater than zero."
+msgstr "Քանակը պետք է լինի զրոյից մեծ։"
+
+#: orders/admin.py:151
+msgid "Price cannot be negative."
+msgstr "Գինը չի կարող լինել բացասական։"
+
+#: orders/admin.py:156
+msgid ""
+"Price does not match the current product price. Please update the product's "
+"price."
+msgstr "Գինը չի համընկնում ընթացիկ ապրանքի գնի հետ։ Խնդրում ենք թարմացնել ապրանքի գինը։"
+
+#: orders/admin.py:160
+msgid "Insufficient stock for the requested quantity."
+msgstr "Պահեստում բավարար ապրանք չկա պահանջվող քանակի համար։"
+
+#: orders/admin.py:177
+msgid "Cannot modify items from shipped or delivered orders."
+msgstr "Հնարավոր չէ փոփոխել առաքված կամ առաքված պատվերների տարրերը։"
+
+#: orders/admin.py:182
+msgid "Cannot update the item due to insufficient stock."
+msgstr "Հնարավոր չէ թարմացնել տարրը՝ պահեստում բավարար քանակի բացակայության պատճառով։"
+
+#: orders/admin.py:192 orders/admin.py:202
+msgid "Cannot delete items from shipped or delivered orders."
+msgstr "Հնարավոր չէ ջնջել տարրերը առաքված կամ առաքված պատվերներից։"
+
+#: orders/models.py:14
+msgid "Pending"
+msgstr "Սպասման մեջ"
+
+#: orders/models.py:15 orders/models.py:79
+msgid "Processing"
+msgstr "Մշակվում է"
+
+#: orders/models.py:16 orders/models.py:80
+msgid "Shipped"
+msgstr "Առաքված"
+
+#: orders/models.py:17 orders/models.py:82
+msgid "Delivered"
+msgstr "Առաքված է"
+
+#: orders/models.py:18
+msgid "Canceled"
+msgstr "Չեղարկված"
+
+#: orders/models.py:60 orders/models.py:275
+msgid "Shipping Method"
+msgstr "Առաքման մեթոդ"
+
+#: orders/models.py:63
+msgid "Shipping Cost"
+msgstr "Առաքման արժեք"
+
+#: orders/models.py:70
+msgid "Tracking Number"
+msgstr "Հետագծման համարը"
+
+#: orders/models.py:76
+msgid "Shipping Status"
+msgstr "Առաքման կարգավիճակ"
+
+#: orders/models.py:81
+msgid "In Transit"
+msgstr "Փոխադրման ընթացքում"
+
+#: orders/models.py:83
+msgid "Cancelled"
+msgstr "Չեղարկված"
+
+#: orders/models.py:88
+msgid "Shipped at"
+msgstr "Առաքման ամսաթիվ"
+
+#: orders/models.py:93
+msgid "Delivered at"
+msgstr "Առաքման ամսաթիվ"
+
+#: orders/models.py:147
+msgid "Email address is required."
+msgstr "Էլ. փոստի հասցեն պարտադիր է։"
+
+#: orders/models.py:149
+msgid "Shipping address is required."
+msgstr "Առաքման հասցեն պարտադիր է։"
+
+#: orders/models.py:157 orders/models.py:208 orders/models.py:288
+msgid "Order"
+msgstr "Պատվեր"
+
+#: orders/models.py:162
+msgid "Product"
+msgstr "Ապրանք"
+
+#: orders/models.py:165
+msgid "Quantity"
+msgstr "Քանակ"
+
+#: orders/models.py:170 orders/models.py:257
+msgid "Price"
+msgstr "Գին"
+
+#: orders/models.py:175
+msgid "Weight (kg)"
+msgstr "Քաշ (կգ)"
+
+#: orders/models.py:182
+msgid "Order Item"
+msgstr "Պատվերի տարր"
+
+#: orders/models.py:183
+msgid "Order Items"
+msgstr "Պատվերի տարրեր"
+
+#: orders/models.py:211
+msgid "Status"
+msgstr "Կարգավիճակ"
+
+#: orders/models.py:218
+msgid "Changed By"
+msgstr "Փոփոխել է"
+
+#: orders/models.py:221
+msgid "Changed At"
+msgstr "Փոփոխման ամսաթիվ"
+
+#: orders/models.py:225
+msgid "Notes"
+msgstr "Նշումներ"
+
+#: orders/models.py:231
+msgid "Order Status History"
+msgstr "Պատվերի կարգավիճակի պատմություն"
+
+#: orders/models.py:232
+msgid "Order Status Histories"
+msgstr "Պատվերի կարգավիճակի պատմություններ"
+
+#: orders/models.py:242
+msgid "Name"
+msgstr "Անուն"
+
+#: orders/models.py:246
+msgid "Carrier"
+msgstr "Առաքիչ"
+
+#: orders/models.py:252
+msgid "Local Delivery"
+msgstr "Տեղական առաքում"
+
+#: orders/models.py:253
+msgid "Store Pickup"
+msgstr "Խանութից վերցնել"
+
+#: orders/models.py:262
+msgid "Estimated Delivery"
+msgstr "Կանխատեսվող առաքում"
+
+#: orders/models.py:266
+msgid "Is Active"
+msgstr "Ակտիվ է"
+
+#: orders/models.py:270
+msgid "Description"
+msgstr "Նկարագրություն"
+
+#: orders/models.py:276
+msgid "Shipping Methods"
+msgstr "Առաքման մեթոդներ"
+
+#: orders/models.py:291
+msgid "Country"
+msgstr "Երկիր"
+
+#: orders/models.py:295
+msgid "City"
+msgstr "Քաղաք"
+
+#: orders/models.py:299
+msgid "Address Line 1"
+msgstr "Հասցե (տող 1)"
+
+#: orders/models.py:303
+msgid "Address Line 2"
+msgstr "Հասցե (տող 2)"
+
+#: orders/models.py:309
+msgid "Postal Code"
+msgstr "Փոստային ինդեքս"
+
+#: orders/models.py:313
+msgid "Phone"
+msgstr "Հեռախոս"
+
+#: orders/models.py:317
+msgid "Delivery Notes"
+msgstr "Առաքման նշումներ"
+
+#: orders/models.py:323
+msgid "Shipping Address"
+msgstr "Առաքման հասցե"
+
+#: orders/models.py:324
+msgid "Shipping Addresses"
+msgstr "Առաքման հասցեներ"

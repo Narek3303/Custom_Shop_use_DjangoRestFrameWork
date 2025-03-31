@@ -13,6 +13,7 @@ from django.core.mail import send_mail
 from rest_framework import serializers, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.utils.translation import gettext_lazy as _
 
 
 
@@ -82,50 +83,160 @@ class SubCategory(models.Model):
         return reverse('subcategory_detail', args=[self.slug])
 
 
-
-
-
 class Product(models.Model):
     class Status(models.TextChoices):
-        DRAFT = 'DF', 'Draft'
-        PUBLISHED = 'PB', 'Published'
+        DRAFT = 'DF', _('Draft')  # Черновик | Նախագիծ
+        PUBLISHED = 'PB', _('Published')  # Опубликовано | Հրապարակված
 
-    category = models.ForeignKey(SubCategory, related_name='products', on_delete=models.CASCADE, null=True)
-    name = models.CharField('Product Name', max_length=200)
-    slug = models.SlugField(max_length=200, blank=True)
-    brand = models.ForeignKey('Brand', verbose_name='Brand', related_name='products', null=True, on_delete=models.CASCADE)
-    image = models.ManyToManyField('Image', verbose_name='Images', related_name='products')
-    size = models.ManyToManyField('Size', verbose_name='Sizes', related_name='products')
-    colors = models.ManyToManyField('Color', related_name="products")
-    description = models.TextField('Product Description', blank=True)
-    delivery_service = models.TextField('Delivery Service', blank=True, null=True)
-    price = models.DecimalField('Price (AMD)', max_digits=10, decimal_places=2)
-    discount_percentage = models.DecimalField('Discount Percentage', max_digits=10, decimal_places=2, default=0, null=True)
-    related_products = models.ManyToManyField("self", blank=True, symmetrical=False)
-    available = models.BooleanField(default=True)
-    created = models.DateTimeField(auto_now_add=True)
-    updated = models.DateTimeField(auto_now=True)
+    category = models.ForeignKey(
+        SubCategory,
+        related_name='products',
+        on_delete=models.CASCADE,
+        null=True,
+        verbose_name=_('Category')  # Категория | Կատեգորիա
+    )
+    name = models.CharField(
+        _('Product Name'),  # Название товара | Ապրանքի անուն
+        max_length=200
+    )
+    slug = models.SlugField(
+        _('Slug'),  # Слаг | Սլագ
+        max_length=200,
+        blank=True
+    )
+    brand = models.ForeignKey(
+        'Brand',
+        verbose_name=_('Brand'),  # Бренд | Ապրանքանիշ
+        related_name='products',
+        null=True,
+        on_delete=models.CASCADE
+    )
+    image = models.ManyToManyField(
+        'Image',
+        verbose_name=_('Images'),  # Изображения | Նկարներ
+        related_name='products'
+    )
+    size = models.ManyToManyField(
+        'Size',
+        verbose_name=_('Sizes'),  # Размеры | Չափսեր
+        related_name='products'
+    )
+    colors = models.ManyToManyField(
+        'Color',
+        related_name="products",
+        verbose_name=_('Colors')  # Цвета | Գույներ
+    )
+    description = models.TextField(
+        _('Product Description'),  # Описание товара | Ապրանքի նկարագրություն
+        blank=True
+    )
+    delivery_service = models.TextField(
+        _('Delivery Service'),  # Условия доставки | Առաքման ծառայություն
+        blank=True,
+        null=True
+    )
+    price = models.DecimalField(
+        _('Price (AMD)'),  # Цена (AMD) | Գին (Դրամ)
+        max_digits=10,
+        decimal_places=2
+    )
+    stock = models.PositiveIntegerField(
+        _('Stock'),  # Наличие | Պաշար
+        default=0
+    )
+    weight = models.DecimalField(
+        _("Weight (kg)"),
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        blank=True,
+        null=True
+    )
+    discount_percentage = models.DecimalField(
+        _('Discount Percentage'),  # Процент скидки | Զեղչի տոկոս
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        null=True
+    )
+    related_products = models.ManyToManyField(
+        "self",
+        blank=True,
+        symmetrical=False,
+        verbose_name=_('Related Products')  # Связанные товары | Կապված ապրանքներ
+    )
+    available = models.BooleanField(
+        _('Available'),  # В наличии | Մատչելի
+        default=True
+    )
+    created = models.DateTimeField(
+        _('Created'),  # Создан | Ստեղծված
+        auto_now_add=True
+    )
+    updated = models.DateTimeField(
+        _('Updated'),  # Обновлено | Թարմացված
+        auto_now=True
+    )
     status = models.CharField(
+        _('Status'),  # Статус | Կարգավիճակ
         max_length=2,
         choices=Status.choices,
         default=Status.DRAFT
     )
-    tags = TaggableManager(verbose_name='Tags')
-    objects = models.Manager()  # Default manager
-    published = PublishedManager()  # Custom manager for published products
-    article = models.CharField(max_length=20, unique=True, blank=True)
-    composition = models.CharField(max_length=255, blank=True)
-    gender = models.CharField(max_length=10,  blank=True,
-                              choices=[('Мужской', 'Мужской'), ('Женский', 'Женский'), ('Унисекс', 'Унисекс')])
-    fit_type = models.CharField(max_length=50, blank=True)
-    pocket_type = models.CharField(max_length=100, blank=True)
-    model_features = models.CharField(max_length=255, blank=True)
-    care_instructions = models.CharField(max_length=255, blank=True)
+    tags = TaggableManager(
+        verbose_name=_('Tags')  # Теги | Պիտակներ
+    )
+    objects = models.Manager()
+    published = PublishedManager()
+    article = models.CharField(
+        _('Article'),  # Артикул | Արտիկուլ
+        max_length=20,
+        unique=True,
+        blank=True
+    )
+    composition = models.CharField(
+        _('Composition'),  # Состав | Բաղադրություն
+        max_length=255,
+        blank=True
+    )
 
+    GENDER_CHOICES = [
+        ('Мужской', _('Men')),  # Мужской | Տղամարդ
+        ('Женский', _('Women')),  # Женский | Կին
+        ('Унисекс', _('Unisex'))  # Унисекс | Ունիսեքս
+    ]
+    gender = models.CharField(
+        _('Gender'),  # Пол | Սեռ
+        max_length=10,
+        blank=True,
+        choices=GENDER_CHOICES
+    )
 
+    fit_type = models.CharField(
+        _('Fit Type'),  # Тип посадки | Հագուստի տեսակ
+        max_length=50,
+        blank=True
+    )
+    pocket_type = models.CharField(
+        _('Pocket Type'),  # Тип кармана | Պարկուճի տեսակ
+        max_length=100,
+        blank=True
+    )
+    model_features = models.CharField(
+        _('Model Features'),  # Особенности модели | Մոդելի առանձնահատկություններ
+        max_length=255,
+        blank=True
+    )
+    care_instructions = models.CharField(
+        _('Care Instructions'),  # Инструкции по уходу | Պահպանման կանոններ
+        max_length=255,
+        blank=True
+    )
 
     class Meta:
         ordering = ['name']
+        verbose_name = _('Product')  # Товар | Ապրանք
+        verbose_name_plural = _('Products')  # Товары | Ապրանքներ
         indexes = [
             models.Index(fields=['id', 'slug']),
             models.Index(fields=['name']),
@@ -152,6 +263,28 @@ class Product(models.Model):
         return self.related_products.exclude(id=self.id)
 
 
+    def get_price_for_size(self, size):
+        """
+        Ստանում ենք ապրանքի գինը ըստ չափսի
+        """
+        # Այս ֆունկցիայի մեջ պետք է որոշել, թե ինչպես է ստացվում գինը:
+        size_price = self.size_prices.get(size=size)  # example if there is a relation to price per size
+        return size_price
+
+
+    def average_rating(self):
+        reviews = self.reviews.filter(status=Review.Status.APPROVED)
+
+        total_rating = sum(review.rating for review in reviews)
+        count = reviews.count()
+
+
+        if count > 0:
+            return total_rating / count
+        else:
+            return 0
+
+
     def get_first_image(self):
         first_image = self.image.first()
         return first_image.image.url if first_image else None
@@ -159,14 +292,19 @@ class Product(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.article:
-            self.article = generate_unique_article()
+            self.article = self.generate_unique_article()
 
         if not self.slug:
             self.slug = f'{slugify(self.name)}-{uuid.uuid4()}'
         super().save(*args, **kwargs)
 
-def generate_unique_article(self):
-    return str(uuid.uuid4().hex[:10]).upper()
+    def generate_unique_article(self):
+        return str(uuid.uuid4().hex[:10]).upper()
+
+
+    def currency_code(self, request):
+        price_currency = getattr(request, 'currency_code')
+        return price_currency
 
 class Image(models.Model):
     image = models.ImageField('Image', upload_to='products/%Y/%m/%d', blank=True)
@@ -236,14 +374,48 @@ class DiscountedShowModel(models.Model):
 
 
 
+class SizePrice(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="size_prices")
+    size = models.ForeignKey(Size, on_delete=models.CASCADE)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Wishlist(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    size = models.ForeignKey(SizePrice, on_delete=models.SET_NULL, null=True)  # Ավելացրեք չափսը
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    final_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     added_at = models.DateTimeField(auto_now_add=True)
     notified = models.BooleanField(default=False, null=True)
 
     class Meta:
-        unique_together = ('user', 'product')
+        unique_together = ('user', 'product', 'size')  # Ուշադրություն՝ ավելացնել unique_together՝ հաշվի առնելով չափսը
+
+
+
+    def get_final_price(self):
+        if self.product.discount_percentage and self.product.discount_percentage > 0:
+            discount_amount = (self.product.discount_percentage / 100) * self.price
+            self.final_price = self.price - discount_amount
+            return self.final_price
+        return None
+
+
+
+
 
 
 
@@ -261,7 +433,7 @@ class Review(models.Model):
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(
-        max_length=2, choices=Status.choices, default=Status.PENDING
+        max_length=2, choices=Status.choices, default=Status.APPROVED
     )
 
     class Meta:
@@ -310,7 +482,3 @@ class Currency(models.Model):
         return cls.objects.filter(exchange_rate=1.0).first()
 
 
-class SizePrice(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="size_prices")
-    size = models.ForeignKey(Size, on_delete=models.CASCADE)
-    price = models.DecimalField(max_digits=10, decimal_places=2)

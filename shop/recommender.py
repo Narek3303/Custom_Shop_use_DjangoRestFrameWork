@@ -1,6 +1,15 @@
 import redis
+# import numpy
+# import surprise
 from django.conf import settings
-from .models import Product
+from .models import Product, Review
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.metrics.pairwise import cosine_similarity
+# import pandas as pd
+# from surprise import SVD, Dataset, Reader
+# from surprise.model_selection import train_test_split
+# from surprise import accuracy
+from cart.models import CartItem
 
 # Redis-ի կապի կառավարման բարելավում՝ connection pool
 pool = redis.ConnectionPool(
@@ -74,3 +83,84 @@ class Recommender:
 
         # Կատարում ենք բոլոր հարցումները միաժամանակ
         pipeline.execute()
+
+
+
+
+# products = Product.objects.all()
+# product_description = [product.description for product in products]
+#
+#
+# vectorizer = TfidfVectorizer(stop_words='english')
+# tfidf_matrix = vectorizer.fit_transform(product_description)
+#
+#
+# cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
+#
+#
+# def get_similar_products(product_id, top_n=5):
+#     idx = products.get(id=product_id).id
+#     sim_scores = list(enumerate(cosine_sim[idx]))
+#     sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+#     product_indices = [i[0] for i in sim_scores]
+#     return [products[i] for i in product_indices]
+#
+#
+# similar_products = get_similar_products(product_id=1, top_n=5)
+#
+# user_ratings = []  # [user_id, product_id, rating]
+#
+# # Մուտքագրեք տվյալները՝ Product-երի վարկանիշներով
+# for review in Review.objects.all():
+#     user_ratings.append([review.user.id, review.product.id, review.rating])
+#
+# # Մշակելու համար Surprise Dataset
+# reader = Reader(rating_scale=(1, 5))  # assuming ratings are between 1 and 5
+# data = Dataset.load_from_df(pd.DataFrame(user_ratings, columns=['userId', 'itemId', 'rating']), reader)
+#
+# # Տեսակավորումը
+# trainset, testset = train_test_split(data, test_size=0.2)
+#
+# # SVD մոդելի ստեղծում
+# model = SVD()
+# model.fit(trainset)
+#
+# # Մոդելի արժեքավորման համար
+# predictions = model.test(testset)
+# print(f"RMSE: {accuracy.rmse(predictions)}")
+#
+#
+# # Հարկավոր է առաջարկել անգնահատված ապրանքներ
+# def recommend_products(user_id, top_n=5):
+#     all_products = Product.objects.all()
+#     unseen_products = [product.id for product in all_products if
+#                        not CartItem.objects.filter(user=user_id, product=product).exists()]
+#
+#     predictions = [model.predict(user_id, product_id) for product_id in unseen_products]
+#     predictions.sort(key=lambda x: x.est, reverse=True)
+#
+#     top_predictions = predictions[:top_n]
+#     recommended_product_ids = [pred[0] for pred in top_predictions]
+#
+#     return Product.objects.filter(id__in=recommended_product_ids)
+#
+#
+# # Օրինակ՝ ստանալ առաջարկվող ապրանքներ
+# recommended_products = recommend_products(user_id=1, top_n=5)
+#
+#
+# def hybrid_recommendation(user_id, product_id, top_n=5):
+#     # Content-based filtering
+#     content_based_recs = get_similar_products(product_id, top_n)
+#
+#     # Collaborative filtering
+#     collaborative_based_recs = recommend_products(user_id, top_n)
+#
+#     # Կատարում ենք դրանց համադրումը՝ ընտրելով մի շարք լավագույն առաջարկներ
+#     recommended_products = list(set(content_based_recs).union(set(collaborative_based_recs)))
+#
+#     return recommended_products[:top_n]
+#
+#
+# # Օրինակ՝ ստանալ երկու մոտեցումների համադրությամբ առաջարկներ
+# hybrid_recs = hybrid_recommendation(user_id=1, product_id=1, top_n=5)

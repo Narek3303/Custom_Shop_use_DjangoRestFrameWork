@@ -1,137 +1,220 @@
-import csv
-import datetime
 from django.contrib import admin
-from django.http import HttpResponse
-from django.urls import reverse
-from django.utils.safestring import mark_safe
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from .models import Order, OrderItem, OrderStatus
+from django.utils.timezone import now
+from django.db import transaction
 
-from .models import Order, OrderItem
-
-
-def export_to_csv(modeladmin, request, queryset):
-    """Տվյալ պատվերները արտահանել CSV ֆայլի մեջ"""
-    opts = modeladmin.model._meta
-    content_disposition = f'attachment; filename={opts.verbose_name}.csv'
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = content_disposition
-    writer = csv.writer(response)
-
-    # Արձագանքեք բոլոր դաշտերին, որոնք չեն ընդգրկում many-to-many կամ one-to-many հարաբերություններ
-    fields = [
-        field
-        for field in opts.get_fields()
-        if not field.many_to_many and not field.one_to_many
-    ]
-    writer.writerow([field.verbose_name for field in fields])
-
-    for obj in queryset:
-        data_row = []
-        for field in fields:
-            value = getattr(obj, field.name)
-            # Ժամանակի ֆորմատավորում
-            if isinstance(value, datetime.datetime):
-                value = value.strftime('%d/%m/%Y')
-            elif isinstance(value, datetime.date):
-                value = value.strftime('%d/%m/%Y')
-            data_row.append(value)
-        writer.writerow(data_row)
-    return response
-
-
-export_to_csv.short_description = _('Export to CSV')
 
 
 class OrderItemInline(admin.TabularInline):
-    """Պատվերի տարրերի ներառում ադմինի վիյուում"""
+    """
+    Inline admin for OrderItem, allowing order items to be edited inside an Order.
+    """
     model = OrderItem
-    raw_id_fields = ['product']
-    extra = 0  # Չկան ավելորդ դատարկ տողեր
-    verbose_name = _('Order Item')
-    verbose_name_plural = _('Order Items')
+    extra = 1  # Allow adding new items
+    readonly_fields = ("total_price",)
 
+    def total_price(self, obj):
+        # Ensure quantity and price are not None before multiplication
+        if obj.quantity and obj.price:
+            return obj.quantity * obj.price
+        return 0  # Return 0 if either value is None
 
-def order_payment(obj):
-    """Ներկայացնում է Stripe վճարման URL-ը որպես սեղմելի հղում"""
-    url = obj.get_stripe_url()
-    if obj.stripe_id:
-        return mark_safe(f'<a href="{url}" target="_blank">{obj.stripe_id}</a>')
-    return _('No payment')
-
-
-order_payment.short_description = _('Stripe payment')
-
-
-def order_detail(obj):
-    """Ստեղծում է պատվերի մանրամասներին հղում"""
-    url = reverse('orders:admin_order_detail', args=[obj.id])
-    return mark_safe(f'<a href="{url}">{_("View")}</a>')
-
-
-def order_pdf(obj):
-    """Ստեղծում է պատվերի հաշիվը PDF ֆայլի տեսքով"""
-    url = reverse('orders:admin_order_pdf', args=[obj.id])
-    return mark_safe(f'<a href="{url}" target="_blank">{_("Invoice")}</a>')
-
-
-order_pdf.short_description = _('Invoice')
+    total_price.short_description = "Total Price"
 
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    """Պատվերի ադմինիստրատիվ կոնֆիգուրացիա"""
-
-    # Ցուցադրման կարգավորումներ
-    list_display = [
-        'id', 'first_name', 'last_name', 'email', 'address', 'postal_code',
-        'city', 'paid', order_payment, 'created', 'updated', order_detail, order_pdf,
-    ]
-    list_filter = ['paid', 'created', 'updated']
-    search_fields = ['first_name', 'last_name', 'email', 'address']
-    date_hierarchy = 'created'
-    ordering = ['-created']
-
-    # Ներառումներ՝ կապված պատվերի տարրերի հետ
+    """
+    Admin panel for Order model with enhanced security, functionality, and readability.
+    Ensures data integrity and provides a user-friendly experience for administrators.
+    """
+    list_display = (
+        "order_number", "user", "email", "phone", "status",
+        "subtotal", "discount", "tax", "total", "created_at", "updated_at"
+    )
+    list_filter = ("status", "created_at")
+    search_fields = ("order_number", "user__email", "phone")
+    readonly_fields = ("order_number", "subtotal", "discount", "tax", "total", "created_at", "updated_at")
     inlines = [OrderItemInline]
 
-    # Հատուկ գործողություններ
-    actions = [export_to_csv]
+    def save_model(self, request, obj, form, change):
+        """
+        Override save_model to ensure total recalculation and validate input before saving the order.
+        """
+        try:
+            # Validate order fields before recalculating total
+            if obj.subtotal < 0:
+                raise ValidationError(_("Subtotal cannot be negative."))
+            if obj.discount < 0:
+                raise ValidationError(_("Discount cannot be negative."))
+            if obj.tax < 0:
+                raise ValidationError(_("Tax cannot be negative."))
 
-    # Բառերը կարգավորելու համար ձևի համար
-    fieldsets = (
-        (None, {
-            'fields': ('first_name', 'last_name', 'email', 'address', 'postal_code', 'city')
-        }),
-        (_('Payment Info'), {
-            'fields': ('paid', 'stripe_id', 'coupon', 'discount')
-        }),
-        (_('Dates'), {
-            'fields': ('created', 'updated')
-        }),
-    )
-    readonly_fields = ['created', 'updated']
+            obj.total = obj.calculate_total()
 
-    # Մասշտաբային թարմացում՝ վճարված կարգավիճակի համար
-    def bulk_update_paid_status(self, request, queryset):
-        """Թարմացնել բոլոր ընտրված պատվերների վճարման կարգավիճակը"""
-        updated_count = queryset.update(paid=True)
-        self.message_user(request, _('%d orders have been marked as paid.') % updated_count)
+            if obj.total < 0:
+                raise ValidationError(_("Total amount cannot be negative."))
 
-    bulk_update_paid_status.short_description = _('Mark as Paid')
+            # Optionally add a timestamp for logging purposes (e.g., to track last changes)
+            obj.updated_at = now()
 
-    # Վճարման կարգավիճակի թարմացում բոլորը միանգամից
-    def bulk_apply_discount(self, request, queryset):
-        """Թարմացնել ընտրված պատվերներին զեղչի արժեքը"""
-        discount_value = request.POST.get('discount_value', 0)
-        if discount_value:
-            updated_count = queryset.update(discount=discount_value)
-            self.message_user(request, _('%d orders have been updated with a discount of %s%%.') % (updated_count, discount_value))
+        except ValidationError as e:
+            self.message_user(request, f"Error recalculating total: {e.message}", level="error")
+            return
 
-    bulk_apply_discount.short_description = _('Apply discount to selected orders')
+        # Only save if all validations passed
+        obj.save()
+
+    def get_readonly_fields(self, request, obj=None):
+        """
+        Dynamically set readonly fields based on the order status.
+        If the order is shipped or delivered, make all fields readonly except the status.
+        """
+        readonly_fields = list(self.readonly_fields)
+
+        if obj and obj.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
+            readonly_fields.extend(
+                ["status", "user", "email", "phone", "address", "subtotal", "discount", "tax", "total"])
+
+        return readonly_fields
+
+    def has_change_permission(self, request, obj=None):
+        """
+        Prevent any changes to orders that are already shipped or delivered.
+        """
+        if obj and obj.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
+            return False  # No change permission for shipped or delivered orders
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        """
+        Prevent deletion of orders that are shipped or delivered.
+        """
+        if obj and obj.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
+            return False  # Prevent deletion for shipped or delivered orders
+        return super().has_delete_permission(request, obj)
 
     def get_actions(self, request):
-        """Հատուկ գործողություններ ադմինի համար"""
+        """
+        Override the get_actions method to dynamically remove 'delete selected' action
+        for orders that are shipped or delivered.
+        """
         actions = super().get_actions(request)
-        actions['bulk_update_paid_status'] = self.bulk_update_paid_status
-        actions['bulk_apply_discount'] = self.bulk_apply_discount
+        if request.user.is_superuser:
+            return actions  # Admins have full access
+
+        # Remove delete action for non-superusers if the order is shipped or delivered
+        for order in self.get_queryset(request):
+            if order.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
+                actions.pop('delete_selected', None)
+
+        return actions
+
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    """
+    Admin panel for OrderItem model with enhanced functionality, validation, security, and data integrity.
+    """
+    list_display = ("order", "product", "quantity", "price", "total_price", "product_stock")
+    search_fields = ("order__order_number", "product__name")
+    readonly_fields = ("total_price",)
+    list_filter = ("order__status",)  # Added filter to sort by order status
+    ordering = ("-order__created_at",)  # Default ordering by order creation date
+
+    def total_price(self, obj):
+        """
+        Calculate total price for an order item: quantity * price.
+        """
+        return obj.quantity * obj.price
+
+    total_price.short_description = _("Total Price")
+
+    def product_stock(self, obj):
+        """
+        Display the current stock level for the product.
+        """
+        return obj.product.stock if obj.product else 0  # Assuming 'stock' field exists in the Product model
+
+    product_stock.short_description = _("Product Stock")
+
+    def save_model(self, request, obj, form, change):
+        """
+        Override save_model to include validation, price consistency, and atomic transaction for data integrity.
+        """
+        # Validate quantity and price
+        if obj.quantity <= 0:
+            raise ValidationError(_("Quantity must be greater than zero."))
+        if obj.price < 0:
+            raise ValidationError(_("Price cannot be negative."))
+
+        # Ensure the product's price matches the price field in OrderItem
+        if obj.product and obj.price != obj.product.price:
+            raise ValidationError(
+                _("Price does not match the current product price. Please update the product's price."))
+
+        # Additional check for stock availability
+        if obj.quantity > obj.product.stock:
+            raise ValidationError(_("Insufficient stock for the requested quantity."))
+
+        # Start a transaction to ensure data integrity
+        with transaction.atomic():
+            # Update product stock before saving order item
+            if obj.product:
+                obj.product.stock -= obj.quantity
+                obj.product.save()
+
+            super().save_model(request, obj, form, change)
+
+    def has_change_permission(self, request, obj=None):
+        """
+        Prevent changes to OrderItem if the parent order is already shipped or delivered.
+        Also, prevent changes if the item quantity exceeds available stock.
+        """
+        if obj and obj.order.status in ["shipped", "delivered"]:
+            self.message_user(request, _("Cannot modify items from shipped or delivered orders."), level="error")
+            return False  # Prevent changes to shipped or delivered orders
+
+        # Ensure no changes if quantity exceeds stock
+        if obj and obj.quantity > obj.product.stock:
+            self.message_user(request, _("Cannot update the item due to insufficient stock."), level="error")
+            return False
+
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        """
+        Prevent deletion of OrderItem if the parent order is already shipped or delivered.
+        """
+        if obj and obj.order.status in ["shipped", "delivered"]:
+            self.message_user(request, _("Cannot delete items from shipped or delivered orders."), level="error")
+            return False  # Prevent deletion for shipped or delivered orders
+        return super().has_delete_permission(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        """
+        Override delete_queryset to handle item deletions safely by checking stock levels.
+        """
+        for order_item in queryset:
+            if order_item.order.status in ["shipped", "delivered"]:
+                self.message_user(request, _("Cannot delete items from shipped or delivered orders."), level="error")
+            else:
+                # Update product stock when deleting order items
+                if order_item.product:
+                    order_item.product.stock += order_item.quantity
+                    order_item.product.save()
+
+        # Proceed with deletion
+        queryset.delete()
+
+    def get_actions(self, request):
+        """
+        Override get_actions to add custom actions (if any) or limit actions based on conditions.
+        """
+        actions = super().get_actions(request)
+        if request.user.is_superuser:
+            # Example: Disable the delete action for superusers in specific cases
+            actions = {key: value for key, value in actions.items() if key != 'delete_selected'}
         return actions

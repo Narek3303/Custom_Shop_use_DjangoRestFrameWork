@@ -5,6 +5,27 @@ from .models import Category, SubCategory, Product, Image, Color, Size, Slider, 
 from decimal import Decimal
 from rest_framework import serializers
 from .models import Category, SubCategory
+from .simliar_products import get_similar_products_ml
+from cart.models import CartItem
+
+
+
+
+
+class SizePriceSerializer(serializers.ModelSerializer):
+    size = serializers.SerializerMethodField()
+
+
+    class Meta:
+        model = SizePrice
+        fields = ['id', 'price', 'size']
+
+
+    def get_size(self, obj):
+        return {"name": obj.size.name, "slug": obj.size.slug}
+
+
+
 
 
 
@@ -107,6 +128,11 @@ class ProductListSerializer(serializers.ModelSerializer):
     liked = serializers.SerializerMethodField()
     final_price = serializers.SerializerMethodField()
     price = serializers.SerializerMethodField()
+    currency_code = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField()
+    count_reviews = serializers.SerializerMethodField()
+    in_cart = serializers.SerializerMethodField()
+    size_prices = SizePriceSerializer(many=True, read_only=True)
 
 
 
@@ -114,7 +140,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'slug', 'image', 'price', 'final_price',
-            'colors', 'brand', 'size', 'liked',
+            'colors', 'brand', 'size', 'liked', 'currency_code',
+            'average_rating', 'count_reviews', 'in_cart', 'size_prices'
         ]
 
     def get_liked(self, obj):
@@ -122,6 +149,25 @@ class ProductListSerializer(serializers.ModelSerializer):
         if user.is_authenticated:
             return Wishlist.objects.filter(user=user, product=obj).exists()
         return False
+
+    def get_in_cart(self, obj):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            return CartItem.objects.filter(cart__user=request.user, product=obj).exists()
+        return False
+
+    def get_average_rating(self, obj):
+        return obj.average_rating()
+
+
+    def get_count_reviews(self, obj):
+        return obj.reviews.filter(status='AP').count()
+
+
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        return obj.currency_code(request)
+
 
     def get_price(self, obj):
         request = self.context.get('request')
@@ -175,12 +221,16 @@ class ProductListFilterPostSerializer(serializers.Serializer):
     discounted = serializers.BooleanField(default=False)
 
 
-class SizePriceSerializer(serializers.ModelSerializer):
-    size = SizeSerializer()  # Վերադարձնում ենք չափսի տվյալները
 
-    class Meta:
-        model = SizePrice
-        fields = ['size', 'price']
+
+
+
+
+
+
+
+
+
 
 
 class RelatedProductSerializer(serializers.ModelSerializer):
@@ -198,6 +248,14 @@ class RelatedProductSerializer(serializers.ModelSerializer):
 
 
 
+class ReviewRatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ['user', 'rating', 'comment', 'created_at']
+
+
+
+
 class ProductDetailSerializer(serializers.ModelSerializer):
     image = ImageSerializer(many=True)
     colors = ColorSerializer(many=True)
@@ -209,6 +267,14 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     final_price = serializers.SerializerMethodField()
     liked = serializers.SerializerMethodField()
     related_products = RelatedProductSerializer(many=True, read_only=True)
+    similar_products = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField()
+    count_reviews = serializers.SerializerMethodField()
+    currency_code = serializers.SerializerMethodField()
+    reviews = serializers.SerializerMethodField()
+
+
+
 
 
 
@@ -217,11 +283,40 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name', 'slug', 'image', 'price', 'final_price', 'colors', 'size', 'brand', 'description', 'delivery_service',
-                  'tags', 'liked', 'size_prices', 'related_products', 'article', 'gender', 'composition', 'created', 'updated', ]
+                  'tags', 'liked', 'size_prices', 'related_products', 'article', 'gender', 'composition', 'created', 'updated', 'similar_products',
+                  'average_rating', 'count_reviews', 'currency_code', 'reviews']
 
 
     def get_tags(self, obj):
         return [tag.name for tag in obj.tags.all()]
+
+
+
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        return obj.currency_code(request)
+
+    def get_reviews(self, obj):
+        reviews = obj.reviews.filter(status=Review.Status.APPROVED, rating=5).order_by('-created_at')[:10]
+
+        return ReviewSerializer(reviews, many=True).data
+
+
+    def get_average_rating(self, obj):
+        return obj.average_rating()
+
+
+    def get_count_reviews(self, obj):
+        return obj.reviews.filter(status='AP').count()
+
+    def get_similar_products(self, obj):
+
+        similar_products = get_similar_products_ml(obj)
+        return ProductListSerializer(similar_products,  many=True, context=self.context).data
+
+
+
+
 
 
     def get_liked(self, obj):
@@ -281,8 +376,6 @@ class ProductFilterSerializer(serializers.Serializer):
 
 
 
-
-
 class ChatGPTPost(serializers.ModelSerializer):
     model = Product
     fields = '__all__'
@@ -292,12 +385,37 @@ class ChatGPTPost(serializers.ModelSerializer):
 
 
 
+
 class WishlistSerializer(serializers.ModelSerializer):
+    product = ProductListSerializer()
+    size = SizePriceSerializer()
+    price = serializers.DecimalField(max_digits=10, decimal_places=2)
+    final_price = serializers.SerializerMethodField()
 
 
     class Meta:
         model = Wishlist
-        fields = ['id', 'user', 'product', 'added_at', 'notified']
+        fields = ['id', 'product', 'size', 'price', 'added_at', 'notified', 'final_price']
+
+    # def get_size(self, obj):
+    #     if obj.size_price and obj.size_price.size:
+    #         return {"name": obj.size_price.size.name, "price": obj.size_price.price, "slug": obj.size_price.size.slug}
+    #     return None
+
+
+
+    def get_final_price(self, obj):
+        return obj.get_final_price()
+
+
+
+
+
+
+
+
+
+
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -321,21 +439,9 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 
-
-
-
-
 class ProductSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name']
-
-
-
-
-
-
-
-
 
 

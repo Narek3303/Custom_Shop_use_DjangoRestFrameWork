@@ -13,13 +13,15 @@
 
 from rest_framework import serializers
 from .models import Cart, CartItem
-from shop.models import Product
+from shop.models import Product, Wishlist
 from shop.models import Size, Color
 from decimal import Decimal
 
 class CartItemSerializer(serializers.ModelSerializer):
     price = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
+    product_image = serializers.SerializerMethodField()
+    liked = serializers.SerializerMethodField()
 
 
 
@@ -27,7 +29,17 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartItem
-        fields = ['product', 'size', 'color', 'quantity', 'price', 'total_price']
+        fields = ['product', 'size', 'color', 'quantity', 'price', 'total_price', 'product_image', 'liked']
+
+
+    def get_product_image(self, obj):
+        return obj.get_product_image()
+
+    def get_liked(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            return Wishlist.objects.filter(user=user, product=obj.product).exists()
+        return False
 
     def create(self, validated_data):
         product = validated_data['product']

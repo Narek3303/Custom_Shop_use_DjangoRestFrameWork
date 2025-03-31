@@ -1,55 +1,40 @@
 from celery import shared_task
 from django.core.mail import send_mail
 from django.conf import settings
-
+from twilio.rest import Client
 from .models import Order
-from django.template.loader import render_to_string
-
 
 @shared_task
-def send_order_confirmation_email(order_id):
+def send_order_status_email(order_id):
     """
-    Celery task to send order confirmation email.
+    Celery task to send email notification about the order status update.
     """
     try:
         order = Order.objects.get(id=order_id)
-        subject = f'Order Confirmation: {order.id}'
-        context = {
-            'order': order,
-            'total_price': order.get_total_cost(),
-            'order_items': order.items.all(),
-        }
-        message = render_to_string('order/email/order_confirmation.html', context)
-
-        mail_sent = send_mail(
+        subject = f"Order #{order.order_id} status updated"
+        message = f"Your order status has been updated to {order.status}."
+        send_mail(
             subject,
             message,
             settings.DEFAULT_FROM_EMAIL,
-            [order.email],
-            fail_silently=False,
+            [order.customer.email],
         )
-
-        if mail_sent:
-            return f"Order {order.id} confirmation email sent successfully."
-        else:
-            return f"Failed to send confirmation email for order {order.id}."
     except Order.DoesNotExist:
-        return f"Order with ID {order_id} not found."
-    except Exception as e:
-        return f"An error occurred while sending email: {str(e)}"
+        pass
 
 
 @shared_task
-def mark_order_as_paid(order_id):
+def send_sms(order_id):
     """
-    Celery task to mark order as paid.
+    Celery task to send SMS notification about the order status update.
     """
     try:
         order = Order.objects.get(id=order_id)
-        order.paid = True
-        order.save()
-        return f"Order {order.id} marked as paid successfully."
+        client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+        message = client.messages.create(
+            body=f"Order #{order.order_id} status updated to {order.status}.",
+            from_=settings.TWILIO_PHONE_NUMBER,
+            to=order.customer.phone_number,
+        )
     except Order.DoesNotExist:
-        return f"Order with ID {order_id} not found."
-    except Exception as e:
-        return f"An error occurred while updating order status: {str(e)}"
+        pass

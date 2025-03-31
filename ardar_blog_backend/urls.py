@@ -23,7 +23,9 @@ urlpatterns = [
     # path('accounts/', include('allauth.urls')),
     path('shop/', include('shop.urls')),
     path('cart/', include('cart.urls')),
-    path('coupon/', include('coupon.urls'))
+    path('coupon/', include('coupon.urls')),
+    path('orders/', include('orders.urls')),
+    path('paypal/', include('paypal.standard.ipn.urls')),
 
 
 

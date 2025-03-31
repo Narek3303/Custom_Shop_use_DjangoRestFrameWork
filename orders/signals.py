@@ -1,11 +1,9 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.core.mail import send_mail
 from .models import Order
+from .utils.pdf_generator import generate_invoice_pdf
 
 @receiver(post_save, sender=Order)
-def send_order_confirmation_email(sender, instance, created, **kwargs):
-    if created:
-        subject = f'Order Confirmation #{instance.id}'
-        message = f'Hello {instance.first_name},\n\nYour order #{instance.id} has been placed successfully.'
-        send_mail(subject, message, 'admin@myshop.com', [instance.email])
+def create_invoice_on_order_completion(sender, instance, created, **kwargs):
+    if instance.status == 'completed' and not hasattr(instance, 'invoice'):
+        generate_invoice_pdf(instance, save_to_file=True)
