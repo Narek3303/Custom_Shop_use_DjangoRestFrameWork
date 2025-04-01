@@ -388,7 +388,7 @@ class ChatGPTPost(serializers.ModelSerializer):
 
 class WishlistSerializer(serializers.ModelSerializer):
     product = ProductListSerializer()
-    size = SizePriceSerializer()
+    size = SizePriceSerializer(required=False, allow_null=True)
     price = serializers.DecimalField(max_digits=10, decimal_places=2)
     final_price = serializers.SerializerMethodField()
 

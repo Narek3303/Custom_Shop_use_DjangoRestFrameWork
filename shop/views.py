@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from decimal import Decimal
-from .recommender import Recommender
+# from .recommender import Recommender
 # from .hybrid_recommender import hybrid_recommendation
 
 
@@ -354,7 +354,7 @@ class ProductFilterListView(APIView):
             products,
             many=True,
             context={'request': request}
-        ).data,
+        ).data
 
         # serialized_recommended_products = ProductListSerializer(
         #     recommended_products,
@@ -369,11 +369,9 @@ class ProductFilterListView(APIView):
 
         return Response(
             {
-                "products": serialized_products,
+                "products": serialized_products
                 # "recommended_products": serialized_recommended_products, # ✅ Ավելացվել է
                 # "hybrid_recommended_products": serialized_hybrid_recommended_products,  # ✅ Hybrid առաջարկները
-                "price_currency": price_currency,
-
             },
             status=status.HTTP_200_OK
         )
@@ -400,7 +398,7 @@ class ToggleWishlistView(APIView):
 
     def post(self, request):
         product_id = request.data.get('product_id')
-        size_id = request.data.get('size_id')
+        size_id = request.data.get('size_id', None)  # Չափսը կարող է լինել None
 
         if not product_id:
             return Response(
@@ -410,8 +408,8 @@ class ToggleWishlistView(APIView):
 
         product = get_object_or_404(Product, id=product_id)
 
-        # Եթե ապրանքը ունի չափսեր և չափսը նշված չէ, վերադարձնում ենք հնարավոր չափսերը
-        if product.size.exists() and not size_id:
+        # Եթե ապրանքը ունի չափսեր, բայց size_id նշված չէ, հնարավոր չափսերն ենք վերադարձնում
+        if product.size.exists() and size_id is None:
             sizes = product.size.all()
             return Response({
                 'status': 'size_required',
@@ -420,35 +418,40 @@ class ToggleWishlistView(APIView):
 
         size = None
         price = None
-        if size_id:
+        if size_id:  # Եթե կա size_id, ստուգում ենք և գինը վերցնում
             size = get_object_or_404(SizePrice, id=size_id, product=product)
-            price = size.price  # Ստանում ենք size_price-ի գինը
+            price = size.price
 
-        # Ստեղծում ենք wishlist-ը՝ հաշվի առնելով չափսը
+        # Ստեղծում ենք wishlist-ը՝ հաշվի առնելով կամ անտեսելով չափսը
         wishlist_item, created = Wishlist.objects.get_or_create(
             user=request.user,
             product=product,
-            size=size
+            size=size  # Կարող է լինել None
         )
 
-        # Եթե արդեն կա, ապա հեռացնում ենք
+        # Եթե արդեն գոյություն ունի, ապա հեռացնում ենք
         if not created:
             wishlist_item.delete()
-            return Response({'message': 'Removed from wishlist',
-                             "id": product_id,
-                             "size_id": size_id,
-                             "liked": False}, status=status.HTTP_200_OK)
+            return Response({
+                'message': 'Removed from wishlist',
+                "id": product_id,
+                "size_id": size_id,
+                "liked": False
+            }, status=status.HTTP_200_OK)
 
-        # Սկսում ենք գինը վերագրել wishlist տարրին
-        wishlist_item.price = price  # Գինը, որը կապում ենք size_price-ի գնին
+        # Եթե չկա չափս, ապա գինը վերցնում ենք հիմնական ապրանքից
+        if price is None:
+            price = product.price  # Օրինակ՝ եթե ապրանքը ունի ընդհանուր գին
+
+        wishlist_item.price = price
         wishlist_item.save()
 
-        return Response({'message': 'Added to wishlist',
-                         "id": product_id,
-                         "size_id": size_id,
-                         "liked": True
-                         }, status=status.HTTP_201_CREATED)
-
+        return Response({
+            'message': 'Added to wishlist',
+            "id": product_id,
+            "size_id": size_id,
+            "liked": True
+        }, status=status.HTTP_201_CREATED)
 
 class WishlistProductsView(APIView):
     permission_classes = [permissions.IsAuthenticated]

@@ -89,6 +89,9 @@ INSTALLED_APPS = [
     'cart.apps.CartConfig',
     'orders.apps.OrdersConfig',
     'paypal.standard.ipn',
+    'gdpr.apps.GdprConfig',
+    'erp.apps.ErpConfig',
+    'security.apps.SecurityConfig',
 
 ]
 
@@ -110,7 +113,12 @@ INSTALLED_APPS += [
 
 
 
-
+# Թույլատրված IP հասցեների ցանկ
+ALLOWED_IPS = [
+    '192.168.1.1',
+    '127.0.0.1',
+    # Ավելացրեք ձեր թույլատրելի IP-ները
+]
 
 
 
@@ -197,6 +205,7 @@ MIDDLEWARE = [
     'social_django.middleware.SocialAuthExceptionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'shop.middleware.CurrencyMiddleware',
+    'security.middleware.IPWhitelistMiddleware',
 
     # 'allauth.account.middleware.AccountMiddleware',
 

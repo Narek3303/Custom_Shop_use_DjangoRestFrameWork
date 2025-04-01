@@ -197,3 +197,5 @@ class CustomPermissionLogic:
             (order.user == user or user.is_staff or
              user.has_perm('orders.edit_order_items'))
         )
+
+

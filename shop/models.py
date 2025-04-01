@@ -118,6 +118,7 @@ class Product(models.Model):
     )
     size = models.ManyToManyField(
         'Size',
+        blank=True,
         verbose_name=_('Sizes'),  # Размеры | Չափսեր
         related_name='products'
     )

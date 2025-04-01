@@ -24,8 +24,11 @@ urlpatterns = [
     path('shop/', include('shop.urls')),
     path('cart/', include('cart.urls')),
     path('coupon/', include('coupon.urls')),
+    path('gdpr/', include('gdpr.urls')),
     path('orders/', include('orders.urls')),
     path('paypal/', include('paypal.standard.ipn.urls')),
+    path('erp/', include('erp.urls')),
+    path('security/', include('security.urls')),
 
 
 

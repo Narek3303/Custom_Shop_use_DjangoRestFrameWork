@@ -29,7 +29,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartItem
-        fields = ['product', 'size', 'color', 'quantity', 'price', 'total_price', 'product_image', 'liked']
+        fields = ['id', 'product', 'size', 'color', 'quantity', 'price', 'total_price', 'product_image', 'liked']
 
 
     def get_product_image(self, obj):

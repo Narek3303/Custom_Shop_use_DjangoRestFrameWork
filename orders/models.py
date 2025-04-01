@@ -380,3 +380,5 @@ class Invoice(models.Model):
 
     def __str__(self):
         return f"Invoice {self.invoice_number} for Order {self.order.id}"
+
+

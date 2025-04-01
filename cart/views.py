@@ -46,44 +46,32 @@ class AddToCartView(APIView):
         size = get_object_or_404(Size, id=size_id) if size_id else None
         color = get_object_or_404(Color, id=color_id) if color_id else None
 
-        # Ստուգում ենք, արդյոք այդ նույն ապրանքը արդեն կա զամբյուղում
-        cart_item, created = CartItem.objects.get_or_create(
+        # Փորձում ենք գտնել արդյոք նույն ապրանքը արդեն զամբյուղում կա
+        existing_item = CartItem.objects.filter(cart=cart, product=product, size=size, color=color).first()
+
+        if existing_item:
+            # Եթե ապրանքը արդեն կա զամբյուղում, նորից չենք ավելացնում
+            return Response(
+                {"message": "Item already exists in cart", "id": product_id, "size_id": size_id, "color_id": color_id},
+                status=status.HTTP_200_OK
+            )
+
+        # Եթե չկա, նոր CartItem ենք ստեղծում
+        cart_item = CartItem.objects.create(
             cart=cart,
             product=product,
             size=size,
             color=color,
-            defaults={"quantity": quantity, "price": price},
+            quantity=quantity,
+            price=price
         )
 
-        if not created:
-            cart_item.quantity += quantity
-            cart_item.save()
-
         cart.update_total_price()
-
-        product_info = [
-            {
-                'id': item.product.id,
-                'name': item.product.name,
-                'quantity': item.quantity,
-                'size': item.size.name if item.size else None,
-
-            }
-            for item in cart.items.all()
-        ]
-
-
 
         conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
 
         serializer = CartSerializer(cart, context={'request': request, 'conversion_rate': conversion_rate})
-
-
-
-        return Response(
-            # 'cart': serializer.data,
-            product_info  # Ավելացրեք պրոդուկտի ID-ները որպես լրացուցիչ դաշտ
-        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class RemoveFromCartView(APIView):
@@ -122,7 +110,7 @@ class RemoveFromCartView(APIView):
         cart.remove_item(product, size=size, color=color)  # Օգտագործում ենք վերևում ուղղված remove_item մեթոդը
         cart.refresh_from_db()  # Թարմացնում ենք զամբյուղի տվյալները
 
-        serializer = CartSerializer(cart)
+        serializer = CartSerializer(cart, context={'request': request,})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
