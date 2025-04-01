@@ -464,7 +464,7 @@ class WishlistProductsView(APIView):
         serializer = WishlistSerializer(wishlist_items, many=True, context={'request': request})
 
         # Վերադարձնել պատասխանը
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"products":serializer.data}, status=status.HTTP_200_OK)
 
 
 class ReviewView(APIView):
