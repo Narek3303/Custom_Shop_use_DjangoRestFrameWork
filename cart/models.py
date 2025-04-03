@@ -129,6 +129,11 @@ class CartItem(models.Model):
         return first_image.image.url if first_image else None  # վերադարձնում ենք URL-ը, եթե նկար կա
 
 
+    def currency_code(self, request):
+        price_currency = getattr(request, 'currency_code')
+        return price_currency
+
+
 
 
 

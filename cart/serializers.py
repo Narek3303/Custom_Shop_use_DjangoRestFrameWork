@@ -22,6 +22,7 @@ class CartItemSerializer(serializers.ModelSerializer):
     total_price = serializers.SerializerMethodField()
     product_image = serializers.SerializerMethodField()
     liked = serializers.SerializerMethodField()
+    currency_code = serializers.SerializerMethodField()
 
 
 
@@ -29,7 +30,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartItem
-        fields = ['id', 'product', 'size', 'color', 'quantity', 'price', 'total_price', 'product_image', 'liked']
+        fields = ['id', 'product', 'size', 'color', 'quantity', 'price', 'total_price', 'product_image', 'liked', 'currency_code']
 
 
     def get_product_image(self, obj):
@@ -37,9 +38,21 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     def get_liked(self, obj):
         user = self.context['request'].user
-        if user.is_authenticated:
-            return Wishlist.objects.filter(user=user, product=obj.product).exists()
+        request = self.context.get('request')
+
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            size_id = request.query_params.get('size_id')
+
+            # Ստանում ենք Wishlist-ի բոլոր տարրերը, որոնք համապատասխանում են product-ին
+            liked_items = Wishlist.objects.filter(user=user, product=obj.product)
+
+            # Եթե size_id կա, ապա պետք է համեմատենք SizePrice-ի `size_id`-ի հետ
+            if size_id:
+                liked_items = liked_items.filter(size__size_id=size_id)
+
+            return liked_items.exists()
         return False
+
 
     def create(self, validated_data):
         product = validated_data['product']
@@ -65,13 +78,20 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     def get_price(self, obj):
         request = self.context.get('request')
+        if request:
+            print("Conversion Rate:", getattr(request, 'conversion_rate', Decimal(1.0)))  # debug
         conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
-        return obj.price * conversion_rate  # Փոխակերպված գինը
+        return obj.price * conversion_rate
 
     def get_total_price(self, obj):
         request = self.context.get('request')
         conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
         return obj.total_price * conversion_rate  # Փոխակերպված ընդհանուր գինը
+
+
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        return obj.currency_code(request)
 
 
 

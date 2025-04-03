@@ -19,10 +19,10 @@ class CartListView(APIView):
 
     def get(self, request, *args, **kwargs):
         cart = get_or_create_cart(request.user)
-        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
-        price_currency = getattr(request, 'currency_code')
 
-        serializer = CartSerializer(cart, context={'request': request, 'conversion_rate': conversion_rate})
+
+
+        serializer = CartSerializer(cart, context={'request': request})
         return Response(serializer.data)
 
 class AddToCartView(APIView):

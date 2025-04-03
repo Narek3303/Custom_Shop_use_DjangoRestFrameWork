@@ -338,7 +338,13 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     def get_in_cart(self, obj):
         request = self.context.get('request')
         if request and hasattr(request, 'user') and request.user.is_authenticated:
-            return CartItem.objects.filter(cart__user=request.user, product=obj).exists()
+            size_id = request.query_params.get('size_id')
+            cart_items = CartItem.objects.filter(cart__user=request.user, product=obj)
+
+            if size_id:
+                cart_items = cart_items.filter(size=size_id)
+
+            return cart_items.exists()
         return False
 
     def get_similar_products(self, obj):
@@ -353,9 +359,16 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     def get_liked(self, obj):
         user = self.context['request'].user
-        if user.is_authenticated:
-            return Wishlist.objects.filter(user=user, product=obj).exists()
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            size_id = request.query_params.get('size_id')
 
+            detail_liked = Wishlist.objects.filter(user=user, product=obj)
+
+            if size_id:
+                detail_liked = detail_liked.filter(size=size_id)
+
+            return detail_liked.exists()
         return False
 
     def get_price(self, obj):

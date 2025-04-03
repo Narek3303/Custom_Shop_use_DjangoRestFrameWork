@@ -459,11 +459,14 @@ class WishlistProductsView(APIView):
         # Ստանալ wishlist-ի ապրանքները, որոնք կապված են օգտատիրոջ հետ
         wishlist_items = Wishlist.objects.filter(user=request.user)
 
+        # Ստանում ենք Wishlist-ի ապրանքները, որոնք կապված են օգտատիրոջ հետ
+        products = [item.product for item in wishlist_items]
+
         # Սերիալիզատորով տվյալները ստանալ
-        serializer = WishlistSerializer(wishlist_items, many=True, context={'request': request})
+        serializer = ProductListSerializer(products, many=True, context={'request': request})
 
         # Վերադարձնել պատասխանը
-        return Response({"products":serializer.data}, status=status.HTTP_200_OK)
+        return Response({"products": serializer.data}, status=status.HTTP_200_OK)
 
 
 class ReviewView(APIView):
