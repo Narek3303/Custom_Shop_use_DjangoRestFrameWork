@@ -94,6 +94,8 @@ class Order(models.Model):
         blank=True,
         null=True
     )
+    notes = models.TextField(_("Order Notes"), blank=True, null=True)
+    is_paid = models.BooleanField(default=False)
 
 
 
@@ -120,8 +122,11 @@ class Order(models.Model):
             super().save(*args, **kwargs)
 
     def generate_order_number(self):
-        """Generate a unique order number."""
-        return f"ORD-{uuid.uuid4().hex[:10].upper()}"
+        """Generate a more human-readable order number"""
+        today_str = now().strftime("%Y%m%d")
+        unique_part = str(uuid.uuid4().hex[:6]).upper()
+        return f"ORD-{today_str}-{unique_part}"
+
 
     def calculate_total(self):
         """Calculate the total cost including shipping"""
@@ -195,8 +200,26 @@ class OrderItem(models.Model):
     def get_total_price(self):
         return self.quantity * self.price
 
+    def validate_payment_method(self):
+        """Ensure valid payment method before processing"""
+        if self.payment_method not in dict(self.PAYMENT_METHODS).keys():
+            raise ValidationError("Invalid payment method selected.")
+
+    def generate_invoice_pdf(self):
+        """Generate invoice PDF (placeholder function)"""
+        from weasyprint import HTML
+        html_content = f"<h1>Invoice {self.invoice_number}</h1>"
+        pdf_file_path = f"media/invoices/{self.invoice_number}.pdf"
+        HTML(string=html_content).write_pdf(pdf_file_path)
+        self.pdf_file = pdf_file_path
+        self.save()
+
+
     def __str__(self):
         return f"{self.quantity} x {self.product.name} (Order: {self.order.order_number})"
+
+
+
 
 
 

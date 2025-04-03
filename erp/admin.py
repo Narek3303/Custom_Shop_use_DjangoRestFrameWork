@@ -33,3 +33,4 @@ class ERPSyncLogAdmin(admin.ModelAdmin):
         return obj.duration()
 
     duration.short_description = 'Duration (seconds)'
+

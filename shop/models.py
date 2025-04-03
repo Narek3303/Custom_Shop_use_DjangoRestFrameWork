@@ -286,6 +286,28 @@ class Product(models.Model):
             return 0
 
 
+
+    def check_stock(self):
+        """Ստուգում է պահեստի քանակը և եթե անհրաժեշտ է՝ ուղարկում զգուշացում"""
+        if self.stock < 10:
+            self.send_alert()
+
+
+    def send_alert(self):
+        """Ուղարկում է ծանուցում պահեստի ցածր լինելու մասին"""
+        message = f"Product '{self.name}' has low stock! Only {self.stock} left."
+        try:
+            send_mail(
+                "Low Stock Alert",
+                "Product X is running low on stock!",
+                "noreply@NSCompany.com",
+                ["margaryannarek056@gmail.com"],
+                fail_silently=False  # Թող բարձրացնի բացառություն
+            )
+        except Exception as e:
+            print(f"❌ Email sending failed: {e}")
+
+
     def get_first_image(self):
         first_image = self.image.first()
         return first_image.image.url if first_image else None

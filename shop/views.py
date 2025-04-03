@@ -110,11 +110,10 @@ class ProductDetailView(APIView):
         return Response({
             'product': ProductDetailSerializer(
                 product, context={'request': request}
-            ).data,
+            ).data
             # 'similar_products': ProductDetailSerializer(
             #     similar_products, many=True, context={'request': request}
             # ).data,
-            'price_currency': price_currency
         }, status=status.HTTP_200_OK)
 
 

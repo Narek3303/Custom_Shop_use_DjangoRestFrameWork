@@ -74,3 +74,5 @@ class SuspiciousIPPattern(models.Model):
     def match(self, ip):
         # Implement your pattern matching logic
         pass
+
+

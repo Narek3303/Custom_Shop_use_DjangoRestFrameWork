@@ -137,3 +137,5 @@ class DataInventory(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_data_category_display()})"
+
+
