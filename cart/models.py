@@ -115,6 +115,10 @@ class CartItem(models.Model):
         self.total_price = self.quantity * self.price
         super().save(*args, **kwargs)
 
+
+
+
+
     def __str__(self):
         return f"{self.product.name} (x{self.quantity})"
 
@@ -142,3 +146,6 @@ class CartManager(models.Manager):
     def get_or_create_cart(self, user):
         cart, created = self.get_or_create(user=user, status='open')
         return cart
+
+
+

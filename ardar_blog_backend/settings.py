@@ -185,7 +185,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
-
+AUTH_PROFILE_MODULE = 'users.UserProfile'
 
 
 
@@ -438,3 +438,14 @@ COMPANY_LOGO_URL = "/static/images/logo.png"  # Absolute URL preferred
 
 # WeasyPrint configuration
 WEASYPRINT_BASEURL = BASE_DIR  # For static files resolution
+
+
+
+
+
+# SESSION_COOKIE_HTTPONLY = False  # Թույլ է տալիս, որ React-ը session կարդա (անվտանգության հաշվին նվազում է)
+# SESSION_COOKIE_SAMESITE = "None"  # Պետք է, եթե frontend-ը ու backend-ը տարբեր դոմեյններում են
+# SESSION_COOKIE_SECURE = True  # Պետք է, եթե օգտագործում ես HTTPS
+
+
+# CORS_ALLOW_CREDENTIALS = True

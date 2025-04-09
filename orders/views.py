@@ -69,8 +69,10 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         if user.is_staff:
-            return Order.objects.all()
-        return Order.objects.filter(user=user)
+            # Staff users can see all orders
+            return Order.objects.select_related('user_profile')  # select_related for efficiency
+        # Regular users can only see their own orders
+        return Order.objects.filter(user_profile=user.userprofile).select_related('user_profile')
 
     def perform_create(self, serializer):
         """

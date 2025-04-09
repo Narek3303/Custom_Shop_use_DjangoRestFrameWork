@@ -76,6 +76,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         cart_item.save()
         return cart_item
 
+
     def get_price(self, obj):
         request = self.context.get('request')
         if request:
@@ -83,19 +84,18 @@ class CartItemSerializer(serializers.ModelSerializer):
         conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
         return obj.price * conversion_rate
 
+
+
     def get_total_price(self, obj):
         request = self.context.get('request')
         conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
         return obj.total_price * conversion_rate  # Փոխակերպված ընդհանուր գինը
 
 
+
     def get_currency_code(self, obj):
         request = self.context.get('request')
         return obj.currency_code(request)
-
-
-
-
 
 
 

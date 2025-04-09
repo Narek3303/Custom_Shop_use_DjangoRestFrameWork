@@ -91,26 +91,23 @@ class RemoveFromCartView(APIView):
 
         cart = get_or_create_cart(request.user)
 
-        # Ստուգում ենք, թե եթե size կամ color ID-ն կա, ապա գտնում ենք համապատասխան մոդելները
-        size = None
-        color = None
+        # Ստուգում ենք size և color ID-ները
+        size = Size.objects.get(id=size_id) if size_id else None
+        color = Color.objects.get(id=color_id) if color_id else None
 
-        if size_id:
-            size = Size.objects.get(id=size_id)  # Փոխարինեք Size մոդելով, եթե դա ձեր մոդելն է
+        # Փնտրում ենք համապատասխան CartItem-ները
+        cart_items = CartItem.objects.filter(cart=cart, product=product, size=size, color=color)
 
-        if color_id:
-            color = Color.objects.get(id=color_id)  # Փոխարինեք Color մոդելով, եթե դա ձեր մոդելն է
-
-        # Պայման՝ ստուգելու, թե արդյոք ապրանքը, սայզը և գույնը գոյություն ունեն զամբյուղում
-        if not CartItem.objects.filter(cart=cart, product=product, size=size, color=color).exists():
+        if not cart_items.exists():
             return Response({"detail": "Product with selected size and color not found in the cart."},
                             status=status.HTTP_404_NOT_FOUND)
 
-        # Հեռացնում ենք ապրանքը՝ հաշվի առնելով size-ը և color-ը
-        cart.remove_item(product, size=size, color=color)  # Օգտագործում ենք վերևում ուղղված remove_item մեթոդը
+        # Ջնջում ենք բոլոր համապատասխան CartItem-ները
+        cart_items.delete()
+
         cart.refresh_from_db()  # Թարմացնում ենք զամբյուղի տվյալները
 
-        serializer = CartSerializer(cart, context={'request': request,})
+        serializer = CartSerializer(cart, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

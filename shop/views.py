@@ -527,20 +527,7 @@ class ReviewView(APIView):
 
 
 
-    def put(self, request, product_id):
-        review_id = Review.objects.filter(product=product_id, )
-        review = self.get_object(review_id, request.user)
-        serializer = ReviewSerializer(review, data=request.data,partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-    def delete(self, request, review_id):
-        review = self.get_object(review_id, request.user)
-        review.delete()
-        return Response({"message": "Review deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
 
 
 class AdminReviewModeration(APIView):
@@ -583,26 +570,49 @@ def convert_price(request, product_id, currency_code):
 
 
 
+from django.core.cache import cache
+from django.shortcuts import get_object_or_404
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework import status
+from decimal import Decimal
+from .models import Currency  # Համոզվիր, որ ունես այս մոդելը
+
 class SetCurrencyAPIView(APIView):
     """
-    API որը թույլ է տալիս ընտրել արժույթը և պահպանել session-ում կամ cache-ում:
+    API որը թույլ է տալիս օգտատերերին ընտրել արժույթը և պահպանել session-ում կամ cache-ում:
     """
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         price_currency = request.data.get('price_currency', 'USD')
 
-        # Ստուգում ենք՝ արդյոք տվյալ արժույթը առկա է մոդելում
-        if not Currency.objects.filter(code=price_currency).exists():
-            return Response({"error": "Invalid currency code"}, status=status.HTTP_400_BAD_REQUEST)
+        # Ստուգում ենք՝ արդյոք արժույթը առկա է մոդելում
+        currency = get_object_or_404(Currency, code=price_currency)
 
-        # Պահպանում ենք արժեքը session-ում
-        request.session['price_currency'] = price_currency
+        # Պահպանում ենք session-ում և cache-ում
+        self._set_currency_in_session(request, price_currency)
+        self._set_currency_in_cache(request, price_currency)
 
-        # Պահպանում ենք cache-ում (եթե օգտատերը authentication ունի)
+        return Response(
+            {
+                "message": f"Currency set to {price_currency}",
+                "currency": price_currency,
+                "exchange_rate": str(currency.exchange_rate)  # Կարող է պետք գալ frontend-ում
+            },
+            status=status.HTTP_200_OK
+        )
+
+    def _set_currency_in_session(self, request, currency_code):
+        """Պահպանում է ընտրած արժույթը session-ում"""
+        request.session['price_currency'] = currency_code
+
+    def _set_currency_in_cache(self, request, currency_code):
+        """Եթե օգտատերը authentication ունի, պահպանում ենք cache-ում"""
         if request.user.is_authenticated:
-            cache.set(f"user_currency_{request.user.id}", price_currency, timeout=60 * 60 * 24)
+            cache.set(f"user_currency_{request.user.id}", currency_code, timeout=60 * 60 * 24)
 
-        return Response({"message": f"Currency set to {price_currency}"}, status=status.HTTP_200_OK)
 
 
 class GetAvailableCurrenciesAPIView(APIView):

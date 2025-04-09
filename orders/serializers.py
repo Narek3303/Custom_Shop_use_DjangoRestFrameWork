@@ -41,6 +41,8 @@ class OrderSerializer(serializers.ModelSerializer):
     subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     discount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
     tax = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    phone = serializers.CharField(source='user_profile.phone_number', read_only=True)
+    address = serializers.CharField(source='user_profile.address', read_only=True)
 
     class Meta:
         model = Order

@@ -29,6 +29,7 @@ urlpatterns = [
     path('paypal/', include('paypal.standard.ipn.urls')),
     path('erp/', include('erp.urls')),
     path('security/', include('security.urls')),
+    path('users/', include('users.urls')),
 
 
 

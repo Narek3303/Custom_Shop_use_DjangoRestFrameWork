@@ -8,6 +8,7 @@ from paypal.standard.ipn.models import PayPalIPN
 from shop.models import Product  # Adjust import as per your project structure
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from users.models import UserProfile
 
 
 class OrderStatus(models.TextChoices):
@@ -32,6 +33,9 @@ class Order(models.Model):
         choices=PAYMENT_METHODS,
         default='card'
     )
+    user_profile = models.ForeignKey('users.UserProfile',
+                                     on_delete=models.CASCADE,
+                                     related_name='orders', null=True)
 
     order_number = models.CharField(
         max_length=20, unique=True, editable=False, db_index=True

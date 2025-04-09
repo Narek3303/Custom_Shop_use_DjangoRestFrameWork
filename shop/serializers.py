@@ -191,19 +191,22 @@ class ProductListSerializer(serializers.ModelSerializer):
     def get_wishlist_price(self, obj):
         """Վերադարձնում է Wishlist-ի գինը, եթե կա"""
         request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
         if request and request.user.is_authenticated:
             wishlist_item = Wishlist.objects.filter(user=request.user, product=obj).first()
             if wishlist_item:
-                return wishlist_item.price
+                return wishlist_item.price * conversion_rate
         return None
 
     def get_wishlist_final_price(self, obj):
+
         """Վերադարձնում է Wishlist-ի վերջնական գինը, եթե կա"""
         request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
         if request and request.user.is_authenticated:
             wishlist_item = Wishlist.objects.filter(user=request.user, product=obj).first()
             if wishlist_item:
-                return wishlist_item.get_final_price()
+                return wishlist_item.get_final_price() * conversion_rate
         return None
 
 
@@ -244,16 +247,6 @@ class ProductListFilterPostSerializer(serializers.Serializer):
         required=False, max_digits=10, decimal_places=2, allow_null=True
     )
     discounted = serializers.BooleanField(default=False)
-
-
-
-
-
-
-
-
-
-
 
 
 
