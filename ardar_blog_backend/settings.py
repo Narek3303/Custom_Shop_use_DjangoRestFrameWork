@@ -441,8 +441,6 @@ WEASYPRINT_BASEURL = BASE_DIR  # For static files resolution
 
 
 
-
-
 # SESSION_COOKIE_HTTPONLY = False  # Թույլ է տալիս, որ React-ը session կարդա (անվտանգության հաշվին նվազում է)
 # SESSION_COOKIE_SAMESITE = "None"  # Պետք է, եթե frontend-ը ու backend-ը տարբեր դոմեյններում են
 # SESSION_COOKIE_SECURE = True  # Պետք է, եթե օգտագործում ես HTTPS

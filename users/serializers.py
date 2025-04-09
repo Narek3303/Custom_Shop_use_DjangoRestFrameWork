@@ -1,6 +1,12 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import UserProfile
+from django.utils.translation import gettext_lazy as _
+from datetime import date, timedelta
+from django.core.validators import RegexValidator
+import re
+import regex
+
 
 
 
@@ -21,6 +27,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = [
             "id",
+            'first_name',
+            'last_name',
             "user_email",
             "phone_number",
             "address",
@@ -58,3 +66,88 @@ class UserProfileSerializer(serializers.ModelSerializer):
             instance.avatar.delete(save=False)
 
         return super().update(instance, validated_data)
+
+
+    def validate_first_name(self, value):
+        value = value.strip().title()
+
+        if not regex.match(r"^[\p{L}ʼ\-]+$", value):
+            raise serializers.ValidationError(_("Անունը պետք է պարունակի միայն այբբենական տառեր և հնարավոր է մեկ շտրիխ (') կամ գծիկ (-)։"))
+
+        if len(value) < 2:
+            raise serializers.ValidationError(_("Անունը պետք է լինի առնվազն 2 նիշ երկար։"))
+
+        if len(value) > 50:
+            raise serializers.ValidationError(_("Անունը չպետք է գերազանցի 50 նիշ։"))
+
+        return value
+
+
+
+
+    def validate_last_name(self, value):
+        value = value.strip().title()
+
+        if not regex.match(r"^[\p{L}ʼ\-]+$", value):
+            raise serializers.ValidationError(_("Ազգանունը պետք է պարունակի միայն այբբենական տառեր և հնարավոր է մեկ շտրիխ (') կամ գծիկ (-)։"))
+
+        if len(value) < 2:
+            raise serializers.ValidationError(_("Ազգանունը պետք է պարունակի միայն այբբենական տառեր և հնարավոր է մեկ շտրիխ (') կամ գծիկ (-)։"))
+
+        if len(value) > 50:
+            raise serializers.ValidationError(_("Ազգանունը չպետք է գերազանցի 50 նիշ։"))
+
+        return value
+
+
+    def validate_phone_number(self, value):
+        phone_regex = RegexValidator(
+            regex=r"^\+?1?\d{9,15}$",
+            message=_("Հեռախոսահամարը պետք է լինի միջազգային ֆորմատով՝ օրինակ՝ +37491234567։")
+        )
+        phone_regex(value)
+        return value
+
+
+    def validate_postal_code(self, value):
+
+        value = value.replace(' ', '')
+
+        if not value.isalnum():
+            raise serializers.ValidationError(_("Փոստային կոդը պետք է պարունակի միայն թվեր և տառեր։"))
+
+
+        if len(value) < 3 or len(value) > 10:
+            raise serializers.ValidationError(_("Փոստային կոդը պետք է ունենա 3-ից 10 նիշ։"))
+
+        if not re.match(r"^[A-Za-z0-9\-]{3,10}$", value):
+            raise serializers.ValidationError(_("Փոստային կոդը պետք է լինի միայն տառեր, թվեր կամ գիծ (նախադասական է)։"))
+
+        return value
+
+    def validate_birth_date(self, value):
+
+        today = date.today()
+        min_age = 18
+        min_birth_date = today - timedelta(days=min_age * 365)
+
+        if value >= today:
+            raise serializers.ValidationError(_("Ծննդյան ամսաթիվը չի կարող լինել ապագայում։"))
+
+        if value > min_birth_date:
+            raise serializers.ValidationError(_("Դուք պետք է լինեք առնվազն 18 տարեկան։"))
+
+        if value.year < 1900:
+            raise serializers.ValidationError(_("Խնդրում ենք մուտքագրել վավեր ծննդյան տարեթիվ (1900-ից հետո)։"))
+
+
+        return value
+
+
+    def validate(self, data):
+        instance = getattr(self, 'instance', None)
+        if instance:
+            for field in ['first_name', 'last_name', 'phone_number', 'address', 'city', 'country', 'postal_code', 'birth_date']:
+                if field in data and data[field] in [None, '', []]:
+                    raise serializers.ValidationError({field: _("Այս դաշտը չի կարող դատարկ լինել, քանի որ այն արդեն լրացված է։")})
+        return data
