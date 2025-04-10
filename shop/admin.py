@@ -77,7 +77,6 @@ class ProductAdmin(admin.ModelAdmin):
         'brand',
         'price_display',
         'discount_display',
-        'final_price_display',
         'available',  # Added to make it editable
         'stock_status',
         'status_badge',
@@ -109,7 +108,6 @@ class ProductAdmin(admin.ModelAdmin):
         'article',
         'created',
         'updated',
-        'final_price_display',
         'product_images_preview'
     )
     actions = ['make_available', 'make_unavailable', 'set_status_draft']
@@ -119,7 +117,7 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('name', 'slug', 'article', 'category', 'brand', 'tags')  # Added tags here
         }),
         ('Pricing', {
-            'fields': ('price', 'discount_percentage', 'final_price_display'),
+            'fields': ('price', 'discount_percentage'),
             'classes': ('collapse',)
         }),
         ('Details', {

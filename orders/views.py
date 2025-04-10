@@ -44,6 +44,12 @@ from .utils.pdf_generator import generate_invoice_pdf
 from django_weasyprint.views import WeasyTemplateResponseMixin
 from django.views.generic import DetailView
 
+import logging
+from django.db import transaction
+from django.utils.translation import gettext_lazy as _
+from orders.exceptions import InventoryError, PaymentProcessingError, FraudDetectionError
+# from notifications.utils import send_order_confirmation_email
+
 
 
 
@@ -710,3 +716,146 @@ def download_invoice(request, order_id):
     response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
     return response
 
+
+
+
+# class OrderProcessingMixin:
+#     """Mixin for comprehensive order processing"""
+#
+#     @transaction.atomic
+#     def process_order(self, order_data):
+#         """
+#         Handles the entire order processing pipeline:
+#         - User authentication & authorization
+#         - Inventory validation & reservation
+#         - Fraud detection
+#         - Tax, discount, and loyalty point calculations
+#         - Payment processing
+#         - Order finalization & fulfillment
+#         - Notifications & audit logging
+#         """
+#         try:
+#             # 1. Validate user permissions
+#             user = order_data.get("user")
+#             self._validate_user(user)
+#
+#             # 2. Validate and reserve inventory
+#             self._validate_order_items(order_data["items"])
+#             self._reserve_inventory(order_data["items"])
+#
+#             # 3. Fraud prevention checks
+#             self._run_fraud_checks(order_data)
+#
+#             # 4. Calculate tax, discounts, and loyalty points
+#             self._apply_tax_calculations(order_data)
+#             self._apply_discounts(order_data)
+#             self._apply_loyalty_points(user, order_data)
+#
+#             # 5. Create order with "Pending" status
+#             order = self._create_pending_order(order_data)
+#
+#             # 6. Process payment
+#             payment_result = self._process_payment(order)
+#
+#             if payment_result.success:
+#                 # 7. Finalize order & adjust stock levels
+#                 self._finalize_order(order)
+#                 self._deduct_inventory(order)
+#
+#                 # 8. Initiate fulfillment process
+#                 self._initiate_fulfillment(order)
+#
+#                 # 9. Send confirmation email
+#                 self._send_confirmation_email(order)
+#
+#                 # 10. Log order event
+#                 self._log_order_audit(order)
+#
+#                 return order
+#             else:
+#                 raise PaymentProcessingError(payment_result.message)
+#
+#         except InventoryError as e:
+#             logger.error(f"Inventory issue: {str(e)}")
+#             self._restore_inventory(order_data["items"])
+#             raise
+#         except FraudDetectionError as e:
+#             logger.warning(f"Fraud detected: {str(e)}")
+#             self._flag_order_for_review(order)
+#             raise
+#         except PaymentProcessingError as e:
+#             logger.error(f"Payment failed: {str(e)}")
+#             self._cleanup_failed_order(order)
+#             raise
+#         except Exception as e:
+#             logger.error(f"Order processing failed: {str(e)}")
+#             self._cleanup_failed_order(order)
+#             raise
+#
+#     def _validate_user(self, user):
+#         """Check if the user is authenticated and has the necessary permissions"""
+#         if not user or not user.is_authenticated:
+#             raise PermissionError(_("Օգտատերը չպետք է անանուն լինի։"))
+#
+#     def _validate_order_items(self, items):
+#         """Ensure all products exist and are available"""
+#         for item in items:
+#             if not self._is_product_available(item["product_id"], item["quantity"]):
+#                 raise InventoryError(_(f"Ապրանքը ({item['product_id']}) չունի բավարար քանակ։"))
+#
+#     def _reserve_inventory(self, items):
+#         """Reserve stock for the order"""
+#         for item in items:
+#             self._update_stock(item["product_id"], -item["quantity"])
+#
+#     def _restore_inventory(self, items):
+#         """Restore inventory in case of failed order"""
+#         for item in items:
+#             self._update_stock(item["product_id"], item["quantity"])
+#
+#     def _run_fraud_checks(self, order_data):
+#         """Perform fraud detection logic"""
+#         if self._detect_suspicious_activity(order_data):
+#             raise FraudDetectionError(_("Հնարավոր կեղծիք է հայտնաբերվել։"))
+#
+#     def _apply_tax_calculations(self, order_data):
+#         """Apply tax calculations based on region & product category"""
+#         order_data["tax"] = self._calculate_tax(order_data)
+#
+#     def _apply_discounts(self, order_data):
+#         """Apply any applicable coupon discounts"""
+#         if "coupon_code" in order_data:
+#             order_data["discount"] = self._calculate_discount(order_data["coupon_code"])
+#
+#     def _apply_loyalty_points(self, user, order_data):
+#         """Apply loyalty points for returning customers"""
+#         if user.is_loyal_customer:
+#             order_data["loyalty_discount"] = self._calculate_loyalty_discount(user)
+#
+#     def _finalize_order(self, order):
+#         """Mark order as completed"""
+#         order.status = "Completed"
+#         order.save()
+#
+#     def _deduct_inventory(self, order):
+#         """Deduct inventory permanently after order completion"""
+#         for item in order.items.all():
+#             self._update_stock(item.product_id, -item.quantity)
+#
+#     def _initiate_fulfillment(self, order):
+#         """Trigger fulfillment process (shipping, logistics, etc.)"""
+#         self._schedule_shipping(order)
+#
+#     def _send_confirmation_email(self, order):
+#         """Send an order confirmation email to the customer"""
+#         send_order_confirmation_email(order)
+#
+#     def _log_order_audit(self, order):
+#         """Log order events for tracking and debugging"""
+#         logger.info(f"Order {order.id} processed successfully.")
+#
+#     def _cleanup_failed_order(self, order):
+#         """Handle order cleanup after failure"""
+#         if order:
+#             order.status = "Failed"
+#             order.save()

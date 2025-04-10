@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from rest_framework.schemas import get_schema_view
 
 
+
 schema_view = get_schema_view(title='Blog API')
 
 
@@ -17,7 +18,7 @@ urlpatterns = [
     path('schema/', schema_view),
     # path('auth/social/', include('allauth.socialaccount.urls')),
     # path('accounts/', include('allauth.urls')),
-    path('api/accounts/', include('authemail.urls')),
+    path('', include('authemail.urls')),
     path("api/accounts/auth/", include("social_django.urls", namespace="social")),
     path('api/accounts/auth/', include('drf_social_oauth2.urls', namespace='drf')),
     # path('accounts/', include('allauth.urls')),
@@ -30,6 +31,7 @@ urlpatterns = [
     path('erp/', include('erp.urls')),
     path('security/', include('security.urls')),
     path('users/', include('users.urls')),
+
 
 
 
