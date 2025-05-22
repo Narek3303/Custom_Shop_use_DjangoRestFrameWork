@@ -464,7 +464,7 @@ CART_SESSION_ID = 'cart'
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-DEBUG = os.getenv("DEBUG", "False") == "False"
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 
