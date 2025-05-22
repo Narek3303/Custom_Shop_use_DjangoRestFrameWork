@@ -266,16 +266,32 @@ GRAPHENE = {
 }
 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'narek_migrated',
+#         'USER': 'gevor',
+#         'PASSWORD': 'narek1234',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
+
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'narek_migrated',
-        'USER': 'gevor',
-        'PASSWORD': 'narek1234',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('narek'),
+        'USER': os.getenv('narek'),
+        'PASSWORD': os.getenv('KSha23n4v9N65FGYLXaTRXeoPyWDIHNF'),
+        'HOST': os.getenv('dpg-d0nhd5gdl3ps73a97rn0-a'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
+
+
+
 
 # DATABASES = {
 #     'default': {
