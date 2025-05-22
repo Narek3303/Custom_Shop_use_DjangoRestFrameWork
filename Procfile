@@ -1,0 +1,1 @@
+web: gunicorn Ardar_Blog.wsgi

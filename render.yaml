@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: django-backend
+    env: python
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "gunicorn Ardar_Blog.wsgi"
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: ardar_blog_backend.settings
+      - key: SECRET_KEY
+        generateValue: true
