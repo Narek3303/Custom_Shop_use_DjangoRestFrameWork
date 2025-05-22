@@ -1,0 +1,43 @@
+/* Zebra striping for SizePrice list rows */
+#result_list tbody tr:nth-child(odd) {
+  background-color: #f9f9f9;
+}
+#result_list tbody tr:nth-child(even) {
+  background-color: #ffffff;
+}
+
+/* Highlight rows with a discount applied */
+#result_list tbody tr td.field-discount_info span {
+  background-color: #fff3cd;
+  border-radius: 3px;
+  padding: 2px 4px;
+  display: inline-block;
+}
+
+/* Right-align numeric columns */
+#result_list tbody td.field-formatted_price,
+#result_list tbody td.field-final_price,
+#result_list tbody td.field-price_difference {
+  text-align: right;
+}
+
+/* Hover effect */
+#result_list tbody tr:hover {
+  background-color: #e6f7ff;
+}
+
+/* Style the custom toggle button container */
+#changelist-filter-buttons {
+  margin-bottom: 1em;
+}
+#changelist-filter-buttons button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#changelist-filter-buttons button:hover {
+  background-color: #0056b3;
+}

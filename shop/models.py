@@ -344,8 +344,14 @@ class Size(models.Model):
     name = models.CharField('Size', max_length=6)
     slug = models.SlugField(max_length=200, null=True, unique=True)
 
+
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['name']          # <— սա է հարթում pagination-ի անորոշությունը
+        verbose_name = 'Size'
+        verbose_name_plural = 'Sizes'
 
 
 class Color(models.Model):
@@ -426,14 +432,13 @@ class Wishlist(models.Model):
     class Meta:
         unique_together = ('user', 'product', 'size')  # Ուշադրություն՝ ավելացնել unique_together՝ հաշվի առնելով չափսը
 
-
-
     def get_final_price(self):
         if self.product.discount_percentage and self.product.discount_percentage > 0:
             discount_amount = (self.product.discount_percentage / 100) * self.price
-            self.final_price = self.price - discount_amount
-            return self.final_price
-        return None
+            final_price = self.price - discount_amount
+            return final_price
+        # Եթե զեղչ չկա, վերադարձնենք հենց ինքնին գինը
+        return self.price
 
 
 
@@ -502,5 +507,8 @@ class Currency(models.Model):
     def get_base_currency(cls):
         """Վերադարձնում է հիմնական արժույթը (օրինակ՝ USD)"""
         return cls.objects.filter(exchange_rate=1.0).first()
+
+
+
 
 

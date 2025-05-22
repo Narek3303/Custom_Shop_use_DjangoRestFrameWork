@@ -7,6 +7,7 @@ from rest_framework import serializers
 from .models import Category, SubCategory
 from .simliar_products import get_similar_products_ml
 from cart.models import CartItem
+from users.models import UserProfile
 
 
 
@@ -14,15 +15,24 @@ from cart.models import CartItem
 
 class SizePriceSerializer(serializers.ModelSerializer):
     size = serializers.SerializerMethodField()
+    price = serializers.SerializerMethodField()  # Ավելացնում ենք սա
 
 
     class Meta:
         model = SizePrice
         fields = ['id', 'price', 'size']
 
-
     def get_size(self, obj):
         return {"name": obj.size.name, "slug": obj.size.slug}
+
+    def get_price(self, obj):
+        request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
+        return obj.price * conversion_rate
+
+
+
+
 
 
 
@@ -118,6 +128,20 @@ class BrandSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'slug']
 
 
+class ProductLikedSerializer(serializers.ModelSerializer):
+    liked = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = ['id', 'liked']
+
+
+    def get_liked(self, obj):
+        user = self.context['request'].user
+        if user.is_authenticated:
+            return Wishlist.objects.filter(user=user, product=obj).exists()
+        return False
+
 
 
 class ProductListSerializer(serializers.ModelSerializer):
@@ -133,6 +157,9 @@ class ProductListSerializer(serializers.ModelSerializer):
     count_reviews = serializers.SerializerMethodField()
     in_cart = serializers.SerializerMethodField()
     size_prices = SizePriceSerializer(many=True, read_only=True)
+    rec_order = serializers.IntegerField(read_only=True)
+
+
 
 
     wishlist_price = serializers.SerializerMethodField()
@@ -145,8 +172,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'slug', 'image', 'price', 'final_price',
-            'colors', 'brand', 'size', 'liked', 'currency_code',
-            'average_rating', 'count_reviews', 'in_cart', 'size_prices', 'wishlist_price', 'wishlist_final_price'
+            'colors', 'brand', 'size', 'liked', 'currency_code', 'description',
+            'average_rating', 'count_reviews', 'in_cart', 'size_prices', 'wishlist_price', 'wishlist_final_price', 'rec_order',
         ]
 
     def get_liked(self, obj):
@@ -247,6 +274,7 @@ class ProductListFilterPostSerializer(serializers.Serializer):
         required=False, max_digits=10, decimal_places=2, allow_null=True
     )
     discounted = serializers.BooleanField(default=False)
+    search = serializers.CharField(required=False, allow_blank=True)
 
 
 
@@ -341,9 +369,16 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         return False
 
     def get_similar_products(self, obj):
-
+        # Ստանում ենք ML-ով ստացված similar products
         similar_products = get_similar_products_ml(obj)
-        return ProductListSerializer(similar_products,  many=True, context=self.context).data
+
+        # Ստանում ենք related_products-ի id-ները
+        related_ids = obj.related_products.values_list('id', flat=True)
+
+        # Հանում ենք այդ id-ներով ապրանքները
+        filtered_similar_products = [product for product in similar_products if product.id not in related_ids]
+
+        return ProductListSerializer(filtered_similar_products, many=True, context=self.context).data
 
 
 
@@ -450,16 +485,24 @@ class WishlistSerializer(serializers.ModelSerializer):
 
 
 
-
+class UserProfileSerializerForReview(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ['first_name', 'last_name', 'avatar']
 
 
 
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    user_profile = UserProfileSerializerForReview(
+        source='user.user_profile',
+        read_only=True
+    )
+
     class Meta:
         model = Review
-        fields = ['id', 'product', 'user', 'rating', 'comment', 'created_at', 'status']
+        fields = ['id', 'product', 'user_profile', 'user', 'rating', 'comment', 'created_at', 'status']
         read_only_fields = ['user', 'status']
 
     def validate_rating(self, value):
@@ -473,6 +516,11 @@ class ReviewSerializer(serializers.ModelSerializer):
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
 
+    def validate_comment(self, value):
+        if not value.strip():
+            raise serializers.ValidationError('Մեկնաբանությունը չի կարող լինել դատարկ')
+        return value
+
 
 
 
@@ -481,5 +529,6 @@ class ProductSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name']
+
 
 

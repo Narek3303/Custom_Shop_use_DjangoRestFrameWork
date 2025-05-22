@@ -12,6 +12,9 @@ from rest_framework.authtoken.models import Token
 from decimal import Decimal
 # from .recommender import Recommender
 # from .hybrid_recommender import hybrid_recommendation
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+from django.db.models import Q, Case, When, IntegerField
+from .ml_recommender_system import hybrid_recommendation
 
 
 from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, Color, DiscountedShowModel, Wishlist, \
@@ -20,7 +23,8 @@ from .models import Category, SubCategory, Product, Slider, Brand, Image, Size, 
 from .serializers import CategorySerializer, SubcategorySerializer, ProductListSerializer, ProductDetailSerializer, \
     UserTokenCheckSerializer, SliderSerializer, ImageSerializer, ColorSerializer, SizeSerializer, BrandSerializer, \
     ProductFilterSerializer, ProductListFilterSerializer, ProductListFilterPostSerializer, ChatGPTPost, CategoryArajarkvoxSerializer, \
-    DiscountedShowSerializer, ReviewSerializer, ReviewRatingSerializer
+    DiscountedShowSerializer, ReviewSerializer, ReviewRatingSerializer, ProductLikedSerializer
+from rest_framework.pagination import PageNumberPagination
 
 
 from rest_framework import generics, permissions
@@ -28,6 +32,27 @@ from rest_framework import generics, permissions
 from .serializers import WishlistSerializer
 import io
 from rest_framework.parsers import JSONParser
+
+
+
+class ProductLikedView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        user = request.user
+        if user.is_authenticated:
+            products = Product.objects.filter(wishlist__user=user).distinct()
+        else:
+            products = Product.objects.none()
+        serializer = ProductLikedSerializer(products, many=True, context={'request': request})
+        return Response({'products': serializer.data})
+
+
+
+class ProductPagination(PageNumberPagination):
+    page_size = 12
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 
 
@@ -97,15 +122,8 @@ class ProductDetailView(APIView):
         conversion_rate = getattr(request, 'conversion_rate', 1.0)
         price_currency = getattr(request, 'currency_code')
 
-        # Գտնում ենք նմանատիպ ապրանքները ըստ tag-երի
-        similar_products = Product.objects.filter(
-            tags__in=product.tags.values_list('id', flat=True),
-            status=Product.Status.PUBLISHED
-        ).exclude(id=product.id)
 
-        similar_products = similar_products.annotate(
-            same_tags=Count('tags')
-        ).order_by('-same_tags', '-created')[:20]
+
 
         return Response({
             'product': ProductDetailSerializer(
@@ -259,6 +277,7 @@ from django.db.models import F, ExpressionWrapper, DecimalField
 class ProductFilterListView(APIView):
     permission_classes = (AllowAny,)
     serializer_class = ProductListFilterPostSerializer
+    pagination_class = ProductPagination
 
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
@@ -268,7 +287,12 @@ class ProductFilterListView(APIView):
 
         validated_data = serializer.validated_data
         discounted = validated_data.get('discounted', False)
-        products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED)
+        products = Product.objects.filter(available=True, status=Product.Status.PUBLISHED).annotate(
+            final_price=ExpressionWrapper(
+                F("price") - (F("price") * F("discount_percentage") / 100),
+                output_field=DecimalField(max_digits=10, decimal_places=2)
+            )
+        )
 
         if discounted:
             products = products.filter(discount_percentage__gt=0)
@@ -300,6 +324,15 @@ class ProductFilterListView(APIView):
         size_slugs = validated_data.get('size')
         if size_slugs:
             products = products.filter(size__slug__in=size_slugs).distinct()
+
+        search_query = validated_data.get("search")
+        if search_query:
+            vector = SearchVector('name', 'article', weight='A') + SearchVector('description', weight='B')
+            query = SearchQuery(search_query)
+            products = products.annotate(
+                search=vector,
+                rank=SearchRank(vector, query)
+            ).filter(Q(search=query) | Q(name__icontains=search_query)).order_by('-rank')
 
         # Ստանում ենք փոխարժեքը middleware-ից
         conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
@@ -348,9 +381,31 @@ class ProductFilterListView(APIView):
 
 
 
+        user_id = request.user.id if request.user.is_authenticated else None
+        if user_id:
+            # Վերադարձնում է առավելագույնը len(products) id-եր, որոնք հարմար են:
+            all_ids = list(products.values_list('id', flat=True))
+            rec_ids = [p.id for p in hybrid_recommendation(user_id, top_n=len(all_ids))
+                       if p.id in all_ids]
+        else:
+            rec_ids = []
+
+        ordering_case = Case(
+            *[When(pk=pid, then=pos) for pos, pid in enumerate(rec_ids)],
+            default=len(rec_ids),
+            output_field=IntegerField()
+        )
+        products = products.annotate(rec_order=ordering_case)
+
+        # 2) Order by նոր դաշտով և fallback-ը՝ name–ով
+        products = products.order_by('rec_order', 'name')
+
+        paginator = self.pagination_class()
+        paginated_products = paginator.paginate_queryset(products, request, view=self)
+
         # Սերիալիզացնում ենք արդյունքները
         serialized_products = ProductListSerializer(
-            products,
+            paginated_products,
             many=True,
             context={'request': request}
         ).data
@@ -368,9 +423,12 @@ class ProductFilterListView(APIView):
 
         return Response(
             {
-                "products": serialized_products
-                # "recommended_products": serialized_recommended_products, # ✅ Ավելացվել է
-                # "hybrid_recommended_products": serialized_hybrid_recommended_products,  # ✅ Hybrid առաջարկները
+                "products": serialized_products,
+                "count": paginator.page.paginator.count,
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link(),
+                "has_next": paginator.page.has_next(),
+                "has_previous": paginator.page.has_previous(),
             },
             status=status.HTTP_200_OK
         )
@@ -421,26 +479,27 @@ class ToggleWishlistView(APIView):
             size = get_object_or_404(SizePrice, id=size_id, product=product)
             price = size.price
 
-        # Ստեղծում ենք wishlist-ը՝ հաշվի առնելով կամ անտեսելով չափսը
+        # Հեռացնում ենք նույն ապրանքի նախորդ չափսերը
+        Wishlist.objects.filter(user=request.user, product=product).exclude(size=size).delete()
+
         wishlist_item, created = Wishlist.objects.get_or_create(
             user=request.user,
             product=product,
-            size=size  # Կարող է լինել None
+            size=size
         )
 
-        # Եթե արդեն գոյություն ունի, ապա հեռացնում ենք
         if not created:
             wishlist_item.delete()
             return Response({
                 'message': 'Removed from wishlist',
                 "id": product_id,
                 "size_id": size_id,
-                "liked": False
+                "liked": False,
+                "wishlist_size_id": size_id
             }, status=status.HTTP_200_OK)
 
-        # Եթե չկա չափս, ապա գինը վերցնում ենք հիմնական ապրանքից
         if price is None:
-            price = product.price  # Օրինակ՝ եթե ապրանքը ունի ընդհանուր գին
+            price = product.price
 
         wishlist_item.price = price
         wishlist_item.save()
@@ -449,8 +508,10 @@ class ToggleWishlistView(APIView):
             'message': 'Added to wishlist',
             "id": product_id,
             "size_id": size_id,
-            "liked": True
+            "liked": True,
+            "wishlist_size_id": size_id
         }, status=status.HTTP_201_CREATED)
+
 
 class WishlistProductsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -619,6 +680,7 @@ class GetAvailableCurrenciesAPIView(APIView):
     """
     API որը վերադարձնում է առկա արժույթները և դրանց փոխարժեքները:
     """
+    permission_classes = (AllowAny,)
 
     def get(self, request):
         currencies = Currency.objects.all().values("code", "exchange_rate")

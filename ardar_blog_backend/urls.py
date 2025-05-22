@@ -3,6 +3,7 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.schemas import get_schema_view
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 
 
@@ -18,7 +19,7 @@ urlpatterns = [
     path('schema/', schema_view),
     # path('auth/social/', include('allauth.socialaccount.urls')),
     # path('accounts/', include('allauth.urls')),
-    path('', include('authemail.urls')),
+    path('api/accounts/', include('authemail.urls')),
     path("api/accounts/auth/", include("social_django.urls", namespace="social")),
     path('api/accounts/auth/', include('drf_social_oauth2.urls', namespace='drf')),
     # path('accounts/', include('allauth.urls')),
@@ -38,11 +39,17 @@ urlpatterns = [
 
 
 
-]
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
 if settings.DEBUG:
+    # serve static files from STATICFILES_DIRS & app static dirs
+    urlpatterns += staticfiles_urlpatterns()
+    # serve media files
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    # Production: ստատիկ ֆայլերը սպասարկում է web server–ը կամ Whitenoise
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
 

@@ -1,0 +1,101 @@
+/* Base styles */
+body {
+    font-family: 'DejaVu Sans', Arial, sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #333;
+}
+
+/* Header styles */
+.invoice-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.company-info {
+    width: 60%;
+}
+
+.company-logo {
+    max-height: 80px;
+    margin-bottom: 10px;
+}
+
+.invoice-info {
+    width: 35%;
+    text-align: right;
+}
+
+.invoice-info h2 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+/* Customer info */
+.customer-info {
+    margin-bottom: 30px;
+}
+
+.customer-info h3 {
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+/* Items table */
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.items-table th {
+    background-color: #f8f9fa;
+    text-align: left;
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+.items-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+}
+
+/* Totals section */
+.totals {
+    float: right;
+    width: 300px;
+    margin-top: 20px;
+}
+
+.totals table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.totals td {
+    padding: 8px;
+    text-align: right;
+}
+
+.grand-total td {
+    font-weight: bold;
+    border-top: 2px solid #333;
+}
+
+/* Footer */
+.invoice-footer {
+    margin-top: 50px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    text-align: center;
+    font-size: 10px;
+    color: #777;
+}
+
+/* Page breaks */
+.page-break {
+    page-break-after: always;
+}

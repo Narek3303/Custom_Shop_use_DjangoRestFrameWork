@@ -43,6 +43,7 @@ class Cart(models.Model):
     def update_total_price(self):
         self.total_price = sum(item.total_price for item in self.items.all())
         self.save()
+        return self.total_price
 
     def close(self):
         self.status = 'closed'
@@ -109,11 +110,14 @@ class CartItem(models.Model):
     color = models.ForeignKey(Color, null=True, blank=True, on_delete=models.SET_NULL)  # Ավելացրինք գույն
     quantity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    final_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 
     def save(self, *args, **kwargs):
         self.total_price = self.quantity * self.price
+        self.final_price = self.total_price  # կամ այլ հաշվարկ, եթե զեղչ կա
         super().save(*args, **kwargs)
+
 
 
 
@@ -146,6 +150,4 @@ class CartManager(models.Manager):
     def get_or_create_cart(self, user):
         cart, created = self.get_or_create(user=user, status='open')
         return cart
-
-
 

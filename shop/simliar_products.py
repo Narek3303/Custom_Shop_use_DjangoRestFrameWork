@@ -4,7 +4,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from .models import Product
 
 
-def get_similar_products_ml(product, top_n=5):
+def get_similar_products_ml(product, top_n=12):
     """Վերադարձնում է ML-ով գտած ամենանմանատիպ ապրանքները"""
 
     # Բոլոր ապրանքները բազայից

@@ -1,0 +1,16 @@
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("select[multiple]").forEach(function (select) {
+        select.querySelectorAll("option").forEach(function (option) {
+            let imageUrl = option.textContent;  // Assuming name stores the image URL
+            if (imageUrl.startsWith("http")) {  // Ensure it's a valid URL
+                let img = document.createElement("img");
+                img.src = imageUrl;
+                img.style.maxWidth = "50px";
+                img.style.maxHeight = "50px";
+                img.style.marginRight = "5px";
+                option.textContent = "";
+                option.appendChild(img);
+            }
+        });
+    });
+});

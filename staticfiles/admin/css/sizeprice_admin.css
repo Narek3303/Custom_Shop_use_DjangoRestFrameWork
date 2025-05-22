@@ -1,0 +1,21 @@
+/* admin/css/sizeprice_admin.css */
+
+.high-price {
+  font-weight: bold;
+  color: #c00;
+  background: rgba(255, 0, 0, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.low-price {
+  color: #090;
+  background: rgba(0, 255, 0, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Hover էֆեկտ change_list-ում */
+.result-list tbody tr:hover {
+  background-color: #f0f8ff !important;
+}

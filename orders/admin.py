@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import Order, OrderItem, OrderStatus
 from django.utils.timezone import now
 from django.db import transaction
-
+from decimal import Decimal
 
 
 class OrderItemInline(admin.TabularInline):
@@ -44,7 +44,6 @@ class OrderAdmin(admin.ModelAdmin):
         Override save_model to ensure total recalculation and validate input before saving the order.
         """
         try:
-            # Validate order fields before recalculating total
             if obj.subtotal < 0:
                 raise ValidationError(_("Subtotal cannot be negative."))
             if obj.discount < 0:
@@ -57,70 +56,64 @@ class OrderAdmin(admin.ModelAdmin):
             if obj.total < 0:
                 raise ValidationError(_("Total amount cannot be negative."))
 
-            # Optionally add a timestamp for logging purposes (e.g., to track last changes)
             obj.updated_at = now()
 
         except ValidationError as e:
-            self.message_user(request, f"Error recalculating total: {e.message}", level="error")
+            self.message_user(request, f"Error saving order: {e.message}", level="error")
             return
 
-        # Only save if all validations passed
-        obj.save()
+        super().save_model(request, obj, form, change)
 
     def get_readonly_fields(self, request, obj=None):
         """
         Dynamically set readonly fields based on the order status.
-        If the order is shipped or delivered, make all fields readonly except the status.
+        If the order is shipped or delivered, make most fields readonly.
         """
-        readonly_fields = list(self.readonly_fields)
-
+        readonly = list(self.readonly_fields)
         if obj and obj.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
-            readonly_fields.extend(
-                ["status", "user", "email", "phone", "address", "subtotal", "discount", "tax", "total"])
-
-        return readonly_fields
+            readonly += [
+                "user", "email", "phone", "address",
+                "subtotal", "discount", "tax", "total", "status"
+            ]
+        return readonly
 
     def has_change_permission(self, request, obj=None):
         """
-        Prevent any changes to orders that are already shipped or delivered.
+        Prevent any changes to shipped or delivered orders.
         """
         if obj and obj.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
-            return False  # No change permission for shipped or delivered orders
+            return False
         return super().has_change_permission(request, obj)
 
     def has_delete_permission(self, request, obj=None):
         """
-        Prevent deletion of orders that are shipped or delivered.
+        Prevent deletion of shipped or delivered orders.
         """
         if obj and obj.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
-            return False  # Prevent deletion for shipped or delivered orders
+            return False
         return super().has_delete_permission(request, obj)
 
     def get_actions(self, request):
         """
-        Override the get_actions method to dynamically remove 'delete selected' action
-        for orders that are shipped or delivered.
+        Remove 'delete_selected' action if any selected order is shipped or delivered.
         """
         actions = super().get_actions(request)
-        if request.user.is_superuser:
-            return actions  # Admins have full access
 
-        # Remove delete action for non-superusers if the order is shipped or delivered
-        for order in self.get_queryset(request):
-            if order.status in [OrderStatus.SHIPPED, OrderStatus.DELIVERED]:
-                actions.pop('delete_selected', None)
+        if not request.user.is_superuser:
+            queryset = self.get_queryset(request)
+            if queryset.filter(status__in=[OrderStatus.SHIPPED, OrderStatus.DELIVERED]).exists():
+                actions.pop("delete_selected", None)
 
         return actions
-
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
     """
     Admin panel for OrderItem model with enhanced functionality, validation, security, and data integrity.
     """
-    list_display = ("order", "product", "quantity", "price", "total_price", "product_stock")
+    list_display = ("order", "product", "quantity", "price", "product_stock")
     search_fields = ("order__order_number", "product__name")
-    readonly_fields = ("total_price",)
+
     list_filter = ("order__status",)  # Added filter to sort by order status
     ordering = ("-order__created_at",)  # Default ordering by order creation date
 

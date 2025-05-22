@@ -1,10 +1,8 @@
-from datetime import timezone
-
+from django.utils import timezone
 from rest_framework import serializers
-from .models import Order, OrderItem, ShippingMethod, ShippingAddress, Shipping
+from .models import Order, OrderItem
 from decimal import Decimal
-
-
+from cart.models import Cart, CartItem
 
 
 class AnalyticsSerializer(serializers.Serializer):
@@ -16,190 +14,116 @@ class AnalyticsSerializer(serializers.Serializer):
 
 
 
-
 class OrderItemSerializer(serializers.ModelSerializer):
-    """
-    Serializer for OrderItem model.
-    """
-    product_name = serializers.CharField(source="product.name", read_only=True)
-    total_price = serializers.SerializerMethodField()
+    product_name = serializers.CharField(source='product.name', read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ["id", "order", "product", "product_name", "quantity", "price", "total_price"]
+        fields = [
+            'id', 'product', 'product_name', 'quantity', 'price',
+            'weight', 'size', 'color', 'total_price'
+        ]
+        read_only_fields = ['price', 'weight', 'total_price']
 
-    def get_total_price(self, obj):
-        return obj.quantity * obj.price
 
+class OrderCreateItemSerializer(serializers.ModelSerializer):
+    """For creating order items from input"""
+    class Meta:
+        model = OrderItem
+        fields = ['product', 'quantity', 'size', 'color']
+
+
+class MoneyField(serializers.DecimalField):
+
+    def to_representation(self, value):
+        return format(value, ".2f")
 
 class OrderSerializer(serializers.ModelSerializer):
-    """
-    Serializer for Order model.
-    """
     items = OrderItemSerializer(many=True, read_only=True)
-    total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    discount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
-    tax = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
-    phone = serializers.CharField(source='user_profile.phone_number', read_only=True)
-    address = serializers.CharField(source='user_profile.address', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    subtotal = MoneyField(max_digits=12, decimal_places=2)
+    total = MoneyField(max_digits=12, decimal_places=2)
+    items_count = serializers.SerializerMethodField()
+    currency_code = serializers.SerializerMethodField()
+
+    def get_items_count(self, obj):
+        return obj.items.count()
 
     class Meta:
         model = Order
         fields = [
-            "id", "order_number", "user", "email", "phone", "address",
-            "status", "subtotal", "discount", "tax", "total", "items", "created_at"
+            'id', 'order_number', 'user', 'user_profile', 'email', 'phone', 'address',
+            'status', 'status_display', 'payment_method', 'currency_code',
+            'subtotal', 'discount', 'tax', 'shipping_cost', 'total',
+            'tracking_number', 'shipped_at', 'delivered_at',
+            'is_paid', 'notes', 'created_at', 'updated_at', 'items',
+            'items_count'  # Հավելյալ դաշտ
         ]
-        read_only_fields = ["order_number", "total", "subtotal", "created_at"]
+        read_only_fields = [
+            'order_number', 'subtotal', 'total',
+            'created_at', 'updated_at', 'items_count'
+        ]
+
+
+
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        return obj.currency_code(request)
+
+    def get_total(self, obj):
+        request = self.context.get('request')
+        conversion_rate = getattr(request, 'conversion_rate', Decimal(1.0))
+        return float(obj.total * conversion_rate)
+
+
+from decimal import Decimal
+
+class OrderCreateSerializer(serializers.ModelSerializer):
+    items = OrderCreateItemSerializer(many=True)
+    currency_code = serializers.SerializerMethodField()
+
+
+    class Meta:
+        model = Order
+        fields = [
+            'email', 'phone', 'address', 'payment_method', 'currency_code',
+            'discount', 'tax', 'shipping_cost', 'notes', 'items'
+        ]
 
     def create(self, validated_data):
-        """
-        Override create to generate order number and calculate totals.
-        """
-        order = Order.objects.create(**validated_data)
-        order.total = order.calculate_total()
-        order.save()
-        return order
+        items_data = validated_data.pop('items')
+        request = self.context.get('request')
+        user = request.user if request and request.user.is_authenticated else None
+        user_profile = getattr(user, 'userprofile', None) if user else None
 
-    def update(self, instance, validated_data):
-        """
-        Override update to recalculate total if necessary.
-        """
-        instance = super().update(instance, validated_data)
-        instance.total = instance.calculate_total()
-        instance.save()
-        return instance
-
-
-
-
-class ShippingAddressSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ShippingAddress
-        fields = '__all__'
-        read_only_fields = ('order',)
-
-class ShippingMethodSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ShippingMethod
-        fields = '__all__'
-
-class ShippingSerializer(serializers.ModelSerializer):
-    tracking_url = serializers.SerializerMethodField()
-    shipping_method = ShippingMethodSerializer()
-
-    class Meta:
-        model = Shipping
-        fields = '__all__'
-        read_only_fields = ('order', 'status', 'shipped_at', 'delivered_at')
-
-    def get_tracking_url(self, obj):
-        if obj.tracking_number and obj.shipping_method:
-            carrier = obj.shipping_method.carrier.lower()
-            if carrier == 'fedex':
-                return f"https://www.fedex.com/fedextrack/?trknbr={obj.tracking_number}"
-            elif carrier == 'ups':
-                return f"https://www.ups.com/track?tracknum={obj.tracking_number}"
-            elif carrier == 'dhl':
-                return f"https://www.dhl.com/en/express/tracking.html?AWB={obj.tracking_number}"
-        return obj.tracking_url
-
-
-
-
-
-class ShippingCalculatorSerializer(serializers.Serializer):
-    """
-    Serializer առաքման արժեքի հաշվարկման համար
-    """
-    country = serializers.CharField(max_length=2, required=True)
-    city = serializers.CharField(max_length=100, required=True)
-    postal_code = serializers.CharField(max_length=20, required=False)
-    weight = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        required=True,
-        min_value=Decimal('0.01')
-    )
-    length = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        required=True,
-        min_value=Decimal('0.1')
-    )
-    width = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        required=True,
-        min_value=Decimal('0.1')
-    )
-    height = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        required=True,
-        min_value=Decimal('0.1')
-    )
-    is_residential = serializers.BooleanField(default=False)
-    insurance_value = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        required=False,
-        min_value=Decimal('0.00')
-    )
-
-    def validate(self, data):
-        """
-        Հավելյալ վալիդացիա չափերի համար
-        """
-        if data['length'] * data['width'] * data['height'] > 1000000:  # 1 մ³-ից մեծ չլինի
-            raise serializers.ValidationError("Package volume is too large")
-        return data
-
-
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from .shipping.integrations.fedex import FedExIntegration  # Կամ ձեր առաքման մատակարարի ինտեգրացիան
-
-
-class ShippingCalculatorView(APIView):
-    """
-    Առաքման արժեքի հաշվարկման API վերջնակետ
-    """
-
-    def post(self, request):
-        serializer = ShippingCalculatorSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=400)
-
-        data = serializer.validated_data
-
-        # Օգտագործեք ձեր առաքման ինտեգրացիան (օրինակ՝ FedEx)
-        fedex = FedExIntegration()
-        rates = fedex.get_rates(
-            origin={
-                'postal_code': '0000',  # Ձեր պահեստի փոստային կոդը
-                'country_code': 'AM'  # Ձեր երկրի կոդը
-            },
-            destination={
-                'postal_code': data.get('postal_code', ''),
-                'country_code': data['country'],
-                'residential': data['is_residential']
-            },
-            package={
-                'weight': float(data['weight']),
-                'length': float(data['length']),
-                'width': float(data['width']),
-                'height': float(data['height'])
-            }
+        # Առաջին հերթին ստեղծում ենք Order instance, բայց դեռ չենք save անում
+        order = Order(
+            user=user,
+            user_profile=user_profile,
+            **validated_data
         )
 
-        if not rates:
-            return Response(
-                {"error": "Could not calculate shipping rates"},
-                status=400
+        order.save()
+
+        # Ստեղծում ենք OrderItem-ները
+        for item_data in items_data:
+            OrderItem.objects.create(
+                order=order,
+                product=item_data['product'],
+                quantity=item_data['quantity'],
+                price=item_data['product'].price,
+                weight=item_data['product'].weight,
+                size=item_data.get('size'),
+                color=item_data.get('color')
             )
 
-        return Response({
-            "rates": rates,
-            "calculation_date": timezone.now().isoformat()
-        })
+        # Հիմա հաշվում ենք գումարները
+        order.subtotal = order.calculate_subtotal()
+        order.total = order.calculate_total()
+        order.save(update_fields=['subtotal', 'total'])
+
+
+
+    def get_currency_code(self, obj):
+        request = self.context.get('request')
+        return obj.currency_code(request)

@@ -9,6 +9,25 @@ from django.shortcuts import get_object_or_404
 from decimal import Decimal
 
 
+from .models import Cart, CartItem
+from .serializers import CartItemSerializer
+
+
+class CartItemListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        try:
+            cart = Cart.objects.get(user=request.user)
+        except Cart.DoesNotExist:
+            return Response({"detail": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        cart_items = CartItem.objects.filter(cart=cart)
+        serializer = CartItemSerializer(cart_items, many=True, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
 # Helper function to get or create cart
 def get_or_create_cart(user):
     cart, created = Cart.objects.get_or_create(user=user, status='open')
@@ -22,7 +41,7 @@ class CartListView(APIView):
 
 
 
-        serializer = CartSerializer(cart, context={'request': request})
+        serializer = CartSerializer(cart, context={'request': request} )
         return Response(serializer.data)
 
 class AddToCartView(APIView):
@@ -120,25 +139,61 @@ class UpdateCartItemQuantityView(APIView):
         size_id = request.data.get("size_id")
         quantity = request.data.get("quantity")
 
-        if not product_id or not size_id:
+        print(f"Received data: Product ID={product_id}, Size ID={size_id}, Quantity={quantity}")
+
+        if not product_id:
             return Response(
-                {"error": "Both product_id and size_id are required."},
+                {"error": "product_id is required."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Փնտրում ենք CartItem-ը `product_id`-ով և `size_id`-ով
-        cart_item = get_object_or_404(CartItem, cart__user=user, product_id=product_id, size_id=size_id)
-
-        # Թարմացնում ենք `quantity`
+        # Վավերացնում ենք քանակը
         if quantity is not None:
-            cart_item.update_quantity(quantity)  # Օգտագործում ենք CartItem-ի մեթոդը
-            cart_item.save()
+            try:
+                quantity = int(quantity)
+                if quantity < 1 or quantity > 99:
+                    return Response(
+                        {"error": "Quantity must be between 1 and 99."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except ValueError:
+                return Response(
+                    {"error": "Quantity must be an integer."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            return Response(
+                {"error": "Quantity is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Փնտրում ենք CartItem-ը ըստ օգտատիրոջ, ապրանքի և չափսի
+        try:
+            lookup = {
+                "cart__user": user,
+                "product_id": product_id,
+            }
+            if size_id:
+                lookup["size_id"] = size_id
+
+            cart_item = get_object_or_404(CartItem, **lookup)
+        except Exception as e:
+            print(f"Error fetching CartItem: {e}")
+            return Response(
+                {"error": "Could not find CartItem with given product_id and optional size_id."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        print(f"Found CartItem: {cart_item}")
+
+        # Թարմացնում ենք քանակը
+        cart_item.update_quantity(quantity)
+
 
         # Թարմացնում ենք զամբյուղը
         cart_item.cart.refresh_from_db()
         cart_item.cart.save()
 
-        serializer = CartSerializer(cart_item.cart)
+        serializer = CartSerializer(cart_item.cart, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class ClearCartView(APIView):

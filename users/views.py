@@ -176,3 +176,8 @@ class UserProfileViewSet(ModelViewSet):
             {"detail": "Account successfully deactivated."},
             status=status.HTTP_200_OK
         )
+
+
+
+
+

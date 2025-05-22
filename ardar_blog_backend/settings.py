@@ -52,10 +52,8 @@ CELERY_BEAT_SCHEDULE = {
 
 
 
-
-# Application definition
-
 INSTALLED_APPS = [
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -66,13 +64,17 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'taggit',
+    'accounts',
     'rest_framework',
     'rest_framework.authtoken',
+
 
     'authemail',
     'oauth2_provider',
     'drf_social_oauth2',
     'social_django',
+    'model_utils',
+    'django_extensions',
 
 
 
@@ -93,7 +95,11 @@ INSTALLED_APPS = [
     'erp.apps.ErpConfig',
     'security.apps.SecurityConfig',
 
+
 ]
+
+# Application definition
+
 
 
 
@@ -101,8 +107,8 @@ INSTALLED_APPS = [
 
 PAYPAL_RECEIVER_EMAIL = "your-paypal-email@example.com"
 
-STRIPE_TEST_PUBLIC_KEY = "your-public-key"
-STRIPE_TEST_SECRET_KEY = "your-secret-key"
+STRIPE_TEST_PUBLIC_KEY = "pk_test_51OQmvuFt0onmnttloiRoZuO637tPGAyw31BmuvJ6RMYL8cIqZYqOsaVQ2CeC1jaBktwbPVSSwCdqV2qNrq8vgAz100CMV4pwLY"
+STRIPE_TEST_SECRET_KEY = "sk_test_51OQmvuFt0onmnttlUGNb382Jh3002BSy96f8nowNSNvNdpyouZABGaHV5W6G0DgTCwru4WJvH8t4j7S9vMLOyDiG00mKW2h6rV"
 
 INSTALLED_APPS += [
     'exchange',
@@ -185,7 +191,7 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 
 AUTH_USER_MODEL = 'users.CustomUser'
 
-AUTH_PROFILE_MODULE = 'users.UserProfile'
+
 
 
 
@@ -231,7 +237,7 @@ ROOT_URLCONF = 'ardar_blog_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [ BASE_DIR / 'templates',],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -262,11 +268,30 @@ GRAPHENE = {
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'narek_migrated',
+        'USER': 'gevor',
+        'PASSWORD': 'narek1234',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+
+# ELASTICSEARCH_DSL = {
+#     'default': {
+#         'hosts': ['http://localhost:9200'],
+#         # URL ձեր Elasticsearch-ի համար
+#     },
+# 'AUTOSYNC': False,
+# }
 
 
 
@@ -313,13 +338,53 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+
+
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+    # BASE_DIR / 'shop' / 'static',
+]
+
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, "static"),            # project/static/
+#     os.path.join(BASE_DIR, "shop", "static")  # կամ յուրաքանչյուր app/static/
+# ]
 #
+# # Ավարտապես, collectstatic–ը կցուի այս երկու տեղերին
+# # եւ հավաքի բոլոր static–երը մեկ output–ում (see STATIC_ROOT)
+# STATIC_URL = '/static/'
+
+# # production–ում նախատեսված մեկ միասնական կատալոգ՝ collectstatic–ի համար
+# STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+#
+#
+# STATICFILES_DIRS = [
+#     BASE_DIR / "static",
+#     BASE_DIR / "shop/static",
+# ]
+
 # STATIC_URL = "static/"
 # STATIC_ROOT = "/home/Narek330333/Ardar_Blog/static/"
 # MEDIA_URL = "/media/"
 # MEDIA_ROOT = "/home/Narek330333/Ardar_Blog/media/"
 #
 
+
+
+# STATIC_URL = '/static/'
+#
+# # Աղբյուր–փաթարկների ցուցակում միայն project_root/static
+# STATICFILES_DIRS = [
+#     BASE_DIR / "static",
+# ]
+#
+# # Production–ում collectstatic–ի թիրախը պակասել չի կարելի
+# STATIC_ROOT = BASE_DIR / "staticfiles"
+#
+# # (Եթե օգտագործում եք WhiteNoise կամ նման storage)
+# STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Default primary key field type
@@ -329,7 +394,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
 
 
 
@@ -339,7 +404,7 @@ REST_FRAMEWORK = {
 
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',  # django-oauth-toolkit >= 1.0.0
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
         'drf_social_oauth2.authentication.SocialAuthentication',
         'rest_framework.authentication.SessionAuthentication',
 
@@ -439,7 +504,7 @@ COMPANY_LOGO_URL = "/static/images/logo.png"  # Absolute URL preferred
 # WeasyPrint configuration
 WEASYPRINT_BASEURL = BASE_DIR  # For static files resolution
 
-
+FRONTEND_HOST = os.environ.get('FRONTEND_HOST', 'http://localhost:3000/')
 
 # SESSION_COOKIE_HTTPONLY = False  # Թույլ է տալիս, որ React-ը session կարդա (անվտանգության հաշվին նվազում է)
 # SESSION_COOKIE_SAMESITE = "None"  # Պետք է, եթե frontend-ը ու backend-ը տարբեր դոմեյններում են
@@ -447,3 +512,4 @@ WEASYPRINT_BASEURL = BASE_DIR  # For static files resolution
 
 
 # CORS_ALLOW_CREDENTIALS = True
+

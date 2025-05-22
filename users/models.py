@@ -10,6 +10,8 @@ from django.utils.translation import gettext_lazy as _
 
 class CustomUser(EmailAbstractUser):
         # Custom fields
+        profile = models.OneToOneField('UserProfile', on_delete=models.CASCADE, related_name='custom_user', null=True,
+                                       blank=True)
         date_of_birth = models.DateField('Date of birth', null=True, blank=True)
 
         # Required
@@ -30,7 +32,7 @@ class UserProfileManager(models.Manager):
 
 
 class UserProfile(models.Model):
-        user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+        user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='user_profile')
         first_name = models.CharField(max_length=50, blank=True, null=True)
         last_name = models.CharField(max_length=50, blank=True, null=True)
         phone_number = models.CharField(
@@ -45,7 +47,6 @@ class UserProfile(models.Model):
         postal_code = models.CharField(max_length=20, blank=True, null=True)
         birth_date = models.DateField(blank=True, null=True)
         avatar = models.ImageField(upload_to="avatars/", blank=True, null=True)
-        email_verified = models.BooleanField(default=False)
         created_at = models.DateTimeField(auto_now_add=True)
         updated_at = models.DateTimeField(auto_now=True)
 
@@ -79,6 +80,6 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def save_user_profile(sender, instance, **kwargs):
-    """Save user profile when user is saved"""
-    if hasattr(instance, 'profile'):
-        instance.profile.save()
+    instance.profile, created = UserProfile.objects.get_or_create(user=instance)
+    instance.profile.save()
+

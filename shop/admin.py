@@ -298,8 +298,9 @@ class WishlistAdmin(admin.ModelAdmin):
 
 @admin.register(Size)
 class SizeAdmin(admin.ModelAdmin):
-    list_display = ['name']
+    list_display = ['name', 'slug']
     prepopulated_fields = {'slug': ('name',)}
+    search_fields = ['name']  # This is required for autocomplete
 
 @admin.register(Color)
 class ColorAdmin(admin.ModelAdmin):
@@ -337,13 +338,57 @@ class ReviewAdmin(admin.ModelAdmin):
 admin.site.register(Review, ReviewAdmin)
 
 
+from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse, path
+from django.http import JsonResponse
+from .models import SizePrice, Product, Size
+
+
+from django.contrib import admin
+from django.urls import path, reverse
+from django.http import JsonResponse
+from django.utils.html import format_html
+
+from .models import SizePrice, Product, Size
+
+
+
+from django.contrib import admin
+from django.utils.html import format_html
+from .models import SizePrice, Size
+
 @admin.register(SizePrice)
 class SizePriceAdmin(admin.ModelAdmin):
-    list_display = ['product', 'price', 'size']
+    list_display       = ('product_link', 'size', 'price', 'colorize_price')
+    list_display_links = ('product_link',)
+    list_editable      = ('size', 'price')
+    list_filter        = ('product', 'size')
+    search_fields      = ('product__name', 'size__name')
+    autocomplete_fields= ('product', 'size')
+    list_per_page      = 25
+    save_on_top        = True
+
+    def colorize_price(self, obj):
+        css_class = 'high-price' if obj.price > 10000 else 'low-price'
+        formatted = f"{int(obj.price):,}".replace(',', ' ')
+        return format_html('<span class="{}">{} AMD</span>', css_class, formatted)
+    colorize_price.short_description = 'Գին (visual)'
+
+    def product_link(self, obj):
+        url = obj.product.get_absolute_url()
+        return format_html('<a href="{}" target="_blank">{}</a>', url, obj.product.name)
+    product_link.short_description = 'Ապրանք'
+
+    def get_search_results(self, request, queryset, search_term):
+        queryset, use_distinct = super().get_search_results(request, queryset, search_term)
+        if request.GET.get('field_name') == 'size':
+            queryset = queryset.order_by('size__name')
+        return queryset, use_distinct
+
+    class Media:
+        css = {'all': ('css/custom_sizeprice.css',)}
+        js = ['js/custom_sizeprice.js']
 
 
-
-
-# --------------------------------------------------------
-
-
+# _-`-_-`-_ ------------------------------------------------------------_-`-_-`-_

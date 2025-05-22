@@ -2,8 +2,19 @@ from django.urls import path
 from . import views
 from .views import ProductListView, ProductFilterListView, ToggleWishlistView, WishlistProductsView, \
                     ReviewView, AdminReviewModeration, ProductPriceView, convert_price, \
-                    SetCurrencyAPIView, GetAvailableCurrenciesAPIView, ProductHybridRecommendationView
+                    SetCurrencyAPIView, GetAvailableCurrenciesAPIView, ProductHybridRecommendationView, ProductLikedView
+from django.http import JsonResponse
+from .models import SizePrice, Size
 
+
+def get_product_sizes(request, product_id):
+    sizes = Size.objects.filter(
+        id__in=SizePrice.objects.filter(product_id=product_id).values_list('size_id', flat=True)
+    ).values('id', 'name')
+
+    return JsonResponse({
+        'sizes': list(sizes)
+    })
 
 
 urlpatterns = [
@@ -30,5 +41,11 @@ urlpatterns = [
     path('api/available-currencies/', GetAvailableCurrenciesAPIView.as_view(), name='available_currencies'),
     path("reviews/<int:product_id>/<int:review_id>/", ReviewView.as_view(), name="review-detail"),
     path("reviews/<int:product_id>/", ReviewView.as_view(), name="review-detail"),
+    path("liked_products/", ProductLikedView.as_view(), name="liked_products"),
+    path('admin/api/product/<int:product_id>/sizes/', get_product_sizes),
+
 
 ]
+
+
+

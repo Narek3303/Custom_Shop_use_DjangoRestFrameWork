@@ -22,7 +22,7 @@ class UserProfileInline(admin.StackedInline):
         'city',
         'country',
         'postal_code',
-        'email_verified',
+
     )
     readonly_fields = ('avatar_preview',)
 
@@ -48,11 +48,11 @@ class CustomUserAdmin(EmailUserAdmin):
 
     inlines = (UserProfileInline,)
     list_display = ('email', 'first_name', 'last_name', 'is_active', 'is_verified', 'is_staff', 'profile_completeness')
-    list_filter = ('is_active', 'is_staff', 'is_superuser', 'is_verified', 'profile__email_verified')
+    list_filter = ('is_active', 'is_staff', 'is_superuser', 'is_verified', )
 
     def profile_completeness(self, obj):
         """Ստուգում է պրոֆիլի լրիվ լինելը"""
-        if hasattr(obj, 'profile'):
+        if hasattr(obj, 'profile') and obj.profile:
             return obj.profile.is_complete_profile()
         return False
 
@@ -60,12 +60,13 @@ class CustomUserAdmin(EmailUserAdmin):
     profile_completeness.short_description = _('Ամբողջական պրոֆիլ')
 
 
+
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     """UserProfile մոդելի հատուկ ադմին"""
 
-    list_display = ('user', 'phone_number', 'email_verified', 'avatar_thumbnail', 'profile_completeness', 'created_at')
-    list_filter = ('email_verified', 'country', 'city', 'created_at')
+    list_display = ('user', 'phone_number',  'avatar_thumbnail', 'profile_completeness', 'created_at')
+    list_filter = ('country', 'city', 'created_at')
     search_fields = ('user__email', 'phone_number', 'address', 'postal_code', 'user__first_name', 'user__last_name')
     readonly_fields = ('avatar_thumbnail', 'created_at', 'updated_at')
 
@@ -74,7 +75,7 @@ class UserProfileAdmin(admin.ModelAdmin):
             'fields': ('user', 'avatar', 'avatar_thumbnail', 'birth_date')
         }),
         (_('Կոնտակտային տվյալներ'), {
-            'fields': ('phone_number', 'email_verified')
+            'fields': ('phone_number',)
         }),
         (_('Հասցե'), {
             'fields': ('address', 'city', 'country', 'postal_code')

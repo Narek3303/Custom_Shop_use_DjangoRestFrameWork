@@ -22,7 +22,7 @@ class CurrencyMiddleware(MiddlewareMixin):
 
         # Եթե դեռ չկա, օգտագործում ենք 'AMD' որպես default
         if not price_currency:
-            price_currency = 'AMD'
+            price_currency = 'USD'
 
         # Պահում ենք request-ում
         request.currency_code = price_currency
@@ -37,3 +37,4 @@ class CurrencyMiddleware(MiddlewareMixin):
             return Decimal(currency.exchange_rate)
         except Currency.DoesNotExist:
             return Decimal(1.0)  # Եթե արժույթը չկա, վերադարձնում ենք 1.0 փոխարժեք
+
