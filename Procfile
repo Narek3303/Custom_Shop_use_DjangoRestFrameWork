@@ -1,1 +1,1 @@
-web: gunicorn Ardar_Blog.wsgi
+web: gunicorn ardar_blog_backend.wsgi --log-file -

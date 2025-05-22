@@ -16,6 +16,7 @@ from oauth2_provider import settings as oauth2_settings
 from dotenv import load_dotenv
 from celery.schedules import crontab
 from django.utils.translation import gettext_lazy as _
+from decouple import config
 
 
 
@@ -30,7 +31,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: don't run with debug turned on in production!
 
 
-ALLOWED_HOSTS = ['ardar-blog.onrender.com']
+ALLOWED_HOSTS = ['*']
 #
 # ALLOWED_HOSTS = ['Narek330333.pythonanywhere.com']
 
@@ -278,14 +279,15 @@ GRAPHENE = {
 # }
 
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '5432'),
+        'NAME': config("PGDATABASE"),
+        'USER': config("PGUSER"),
+        'PASSWORD': config("PGPASSWORD"),
+        'HOST': config("PGHOST"),
+        'PORT': config("PGPORT"),
     }
 }
 
