@@ -16,7 +16,7 @@ from oauth2_provider import settings as oauth2_settings
 from dotenv import load_dotenv
 from celery.schedules import crontab
 from django.utils.translation import gettext_lazy as _
-from decouple import config
+
 
 
 
@@ -283,11 +283,11 @@ GRAPHENE = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config("PGDATABASE"),
-        'USER': config("PGUSER"),
-        'PASSWORD': config("PGPASSWORD"),
-        'HOST': config("PGHOST"),
-        'PORT': config("PGPORT"),
+        'NAME': os.getenv("PG_NAME"),
+        'USER': os.getenv("PG_USER"),
+        'PASSWORD': os.getenv("PG_PASSWORD"),
+        'HOST': os.getenv("PG_HOST"),
+        'PORT': os.getenv("PG_PORT"),
     }
 }
 
