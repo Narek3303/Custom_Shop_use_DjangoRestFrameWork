@@ -282,12 +282,11 @@ GRAPHENE = {
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv("PG_NAME"),
-        'USER': os.getenv("PG_USER"),
-        'PASSWORD': os.getenv("PG_PASSWORD"),
-        'HOST': os.getenv("PG_HOST"),
-        'PORT': os.getenv("PG_PORT"),
+        'NAME':     os.getenv("DB_NAME"),
+        'USER':     os.getenv("DB_USER"),
+        'PASSWORD': os.getenv("DB_PASSWORD"),
+        'HOST':     os.getenv("DB_HOST"),
+        'PORT':     os.getenv("DB_PORT"),
     }
 }
 
