@@ -30,7 +30,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django_weasyprint.views import WeasyTemplateResponseMixin
+# from django_weasyprint.views import WeasyTemplateResponseMixin
 
 from shop.models import Product
 from users.models import UserProfile
@@ -359,45 +359,45 @@ class OrderAnalyticsView(APIView):
         ).order_by('-total')
 
 
-class OrderPDFView(WeasyTemplateResponseMixin, DetailView):
-    """Generates PDF invoices for orders with company branding."""
-    model = Order
-    template_name = 'orders/invoice_pdf.html'
-    pdf_filename = 'invoice.pdf'
-    pdf_attachment = True
-
-    def get_context_data(self, **kwargs):
-        """Enriches the template context with order and company data."""
-        context = super().get_context_data(**kwargs)
-        order = self.object
-
-        context.update({
-            'order': order,
-            'items': order.items.all().select_related('product'),
-            'company': self._get_company_info(),
-            'dates': self._get_invoice_dates(),
-            'shipping': getattr(order, 'shipping', None)
-        })
-
-        return context
-
-    def _get_company_info(self):
-        """Retrieves company information from settings."""
-        return {
-            'name': settings.COMPANY_NAME,
-            'address': settings.COMPANY_ADDRESS,
-            'phone': settings.COMPANY_PHONE,
-            'email': settings.COMPANY_EMAIL,
-            'tax_id': settings.COMPANY_TAX_ID,
-            'logo': settings.COMPANY_LOGO_URL
-        }
-
-    def _get_invoice_dates(self):
-        """Generates dates for the invoice."""
-        return {
-            'today': datetime.now().strftime("%B %d, %Y"),
-            'due_date': (datetime.now() + timedelta(days=14)).strftime("%B %d, %Y")
-        }
+# class OrderPDFView(WeasyTemplateResponseMixin, DetailView):
+#     """Generates PDF invoices for orders with company branding."""
+#     model = Order
+#     template_name = 'orders/invoice_pdf.html'
+#     pdf_filename = 'invoice.pdf'
+#     pdf_attachment = True
+#
+#     def get_context_data(self, **kwargs):
+#         """Enriches the template context with order and company data."""
+#         context = super().get_context_data(**kwargs)
+#         order = self.object
+#
+#         context.update({
+#             'order': order,
+#             'items': order.items.all().select_related('product'),
+#             'company': self._get_company_info(),
+#             'dates': self._get_invoice_dates(),
+#             'shipping': getattr(order, 'shipping', None)
+#         })
+#
+#         return context
+#
+#     def _get_company_info(self):
+#         """Retrieves company information from settings."""
+#         return {
+#             'name': settings.COMPANY_NAME,
+#             'address': settings.COMPANY_ADDRESS,
+#             'phone': settings.COMPANY_PHONE,
+#             'email': settings.COMPANY_EMAIL,
+#             'tax_id': settings.COMPANY_TAX_ID,
+#             'logo': settings.COMPANY_LOGO_URL
+#         }
+#
+#     def _get_invoice_dates(self):
+#         """Generates dates for the invoice."""
+#         return {
+#             'today': datetime.now().strftime("%B %d, %Y"),
+#             'due_date': (datetime.now() + timedelta(days=14)).strftime("%B %d, %Y")
+#         }
 
 
 def download_invoice(request, order_id):
