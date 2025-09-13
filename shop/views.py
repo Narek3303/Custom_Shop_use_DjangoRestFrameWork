@@ -455,7 +455,7 @@ class ToggleWishlistView(APIView):
 
     def post(self, request):
         product_id = request.data.get('product_id')
-        size_id = request.data.get('size_id', None)  # Չափսը կարող է լինել None
+        size_id = request.data.get('size_id', None)
 
         if not product_id:
             return Response(
@@ -465,21 +465,13 @@ class ToggleWishlistView(APIView):
 
         product = get_object_or_404(Product, id=product_id)
 
-        # Եթե ապրանքը ունի չափսեր, բայց size_id նշված չէ, հնարավոր չափսերն ենք վերադարձնում
-        if product.size.exists() and size_id is None:
-            sizes = product.size.all()
-            return Response({
-                'status': 'size_required',
-                'sizes': SizeSerializer(sizes, many=True).data
-            }, status=status.HTTP_200_OK)
-
         size = None
         price = None
-        if size_id:  # Եթե կա size_id, ստուգում ենք և գինը վերցնում
+        if size_id:
             size = get_object_or_404(SizePrice, id=size_id, product=product)
             price = size.price
 
-        # Հեռացնում ենք նույն ապրանքի նախորդ չափսերը
+        # Հեռացնել նախորդ նույն ապրանքի wishlist item-ները՝ այլ չափսերով
         Wishlist.objects.filter(user=request.user, product=product).exclude(size=size).delete()
 
         wishlist_item, created = Wishlist.objects.get_or_create(
@@ -511,6 +503,7 @@ class ToggleWishlistView(APIView):
             "liked": True,
             "wishlist_size_id": size_id
         }, status=status.HTTP_201_CREATED)
+
 
 
 class WishlistProductsView(APIView):

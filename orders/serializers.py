@@ -16,14 +16,19 @@ class AnalyticsSerializer(serializers.Serializer):
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
+    first_image = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
         fields = [
             'id', 'product', 'product_name', 'quantity', 'price',
-            'weight', 'size', 'color', 'total_price'
+            'weight', 'size', 'color', 'total_price', 'first_image'
         ]
         read_only_fields = ['price', 'weight', 'total_price']
+
+
+    def get_first_image(self, obj):
+        return obj.product.get_first_image()
 
 
 class OrderCreateItemSerializer(serializers.ModelSerializer):
