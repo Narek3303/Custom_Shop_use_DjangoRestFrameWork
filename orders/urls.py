@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
 
     OrderAnalyticsView,
-    OrderPDFView,
+    # OrderPDFView,
     download_invoice,
     OrderListView, OrderDetailView, OrderCreateView, OrderStatusUpdateView
 
@@ -12,7 +12,7 @@ from . import views
 urlpatterns = [
     path('analytics/', OrderAnalyticsView.as_view(), name='order-analytics'),
     path('analytics/<str:period>/', OrderAnalyticsView.as_view(), name='order-analytics-period'),
-    path('order/<int:pk>/pdf/', OrderPDFView.as_view(), name='order-pdf'),
+    # path('order/<int:pk>/pdf/', OrderPDFView.as_view(), name='order-pdf'),
     path('order/<int:order_id>/download-invoice/', download_invoice, name='download-invoice'),
 
     path('', OrderListView.as_view(), name='order-list'),
